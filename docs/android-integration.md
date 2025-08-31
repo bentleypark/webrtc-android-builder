@@ -1,12 +1,22 @@
 # 📱 Android Project Integration Example
 ## Complete WebRTC Android Integration Guide
 
+### 🎯 Dynamic WebRTC Version Support
+
+This guide demonstrates integration with **dynamically generated WebRTC AAR files** from our GitHub Action. The action automatically detects the milestone version from the selected branch and generates appropriately named AAR files:
+
+- **branch-heads/7151** → `libwebrtc-m137-X.aar` (M137)
+- **branch-heads/7103** → `libwebrtc-m136-X.aar` (M136)
+- **branch-heads/7000+** → `libwebrtc-m135-X.aar` (M135)
+
+**🔗 Milestone Reference**: Use [Chromium Dash](https://chromiumdash.appspot.com/branches) to find branch numbers for your target WebRTC milestone.
+
 ### 🏗️ Project Structure
 ```
 MyWebRTCApp/
 ├── app/
 │   ├── libs/
-│   │   └── libwebrtc-m137-patched-X.aar          # The built AAR file
+│   │   └── libwebrtc-mXXX-X.aar          # The built AAR file (dynamic milestone)
 │   ├── src/main/
 │   │   └── java/.../
 │   │       ├── MainActivity.kt
@@ -82,7 +92,7 @@ android {
 
 dependencies {
     // 🚀 WebRTC AAR file
-    implementation files('libs/libwebrtc-m137-patched-X.aar')  // X = GitHub run number
+    implementation files('libs/libwebrtc-m137-X.aar')  // Example: M137, X = GitHub run number
     
     // Android base libraries
     implementation 'androidx.appcompat:appcompat:1.6.1'
@@ -344,7 +354,7 @@ class WebRTCManager(private val context: Context) {
         peerConnection?.close()
         peerConnectionFactory.dispose()
         eglBase.release()
-        PeerConnectionFactory.shutdown())
+        PeerConnectionFactory.shutdown()
     }
 }
 ```
@@ -481,28 +491,30 @@ class MainActivity : AppCompatActivity() {
 ## ⚡ Performance Optimization Tips
 
 ### Adjust Resolution and Frame Rate
-```java
-// 고해상도 (고품질)
-videoCapturer.startCapture(1920, 1080, 30);
+```kotlin
+// High resolution (high quality)
+videoCapturer?.startCapture(1920, 1080, 30)
 
-// 중해상도 (균형)  
-videoCapturer.startCapture(1280, 720, 30);
+// Medium resolution (balanced)  
+videoCapturer?.startCapture(1280, 720, 30)
 
-// 저해상도 (저사양 기기)
-videoCapturer.startCapture(640, 480, 24);
+// Low resolution (low-end devices)
+videoCapturer?.startCapture(640, 480, 24)
 ```
 
 ### Hardware Acceleration Settings
-```java
-// 하드웨어 인코딩/디코딩 활성화
-PeerConnectionFactory.builder()
-    .setVideoEncoderFactory(new DefaultVideoEncoderFactory(
-        eglBase.getEglBaseContext(), 
-        true,   // enableIntelVp8Encoder
-        true    // enableH264HighProfile
-    ))
-    .setVideoDecoderFactory(new DefaultVideoDecoderFactory(eglBase.getEglBaseContext()))
-    .createPeerConnectionFactory();
+```kotlin
+// Enable hardware encoding/decoding
+val peerConnectionFactory = PeerConnectionFactory.builder()
+    .setVideoEncoderFactory(
+        DefaultVideoEncoderFactory(
+            eglBase.eglBaseContext, 
+            true,   // enableIntelVp8Encoder
+            true    // enableH264HighProfile
+        )
+    )
+    .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBase.eglBaseContext))
+    .createPeerConnectionFactory()
 ```
 
 ---

@@ -7,6 +7,12 @@ branding:
   color: 'blue'
 
 inputs:
+  webrtc_branch:
+    description: 'WebRTC branch to build (e.g., branch-heads/7151, branch-heads/7103)'
+    required: false
+    default: 'branch-heads/7151'
+    type: string
+  
   target_arch:
     description: 'Target architectures (comma separated)'
     required: false
@@ -51,9 +57,30 @@ runs:
       shell: bash
       run: |
         echo "🚀 Starting WebRTC Android AAR build..."
-        echo "Branch: branch-heads/7151"
+        echo "Branch: ${{ inputs.webrtc_branch }}"
         echo "Architectures: ${{ inputs.target_arch }}"
         echo "Configuration: ${{ inputs.build_config }}"
+        
+        # Extract branch number and determine milestone
+        BRANCH_NUMBER=$(echo "${{ inputs.webrtc_branch }}" | sed 's/.*branch-heads\///')
+        echo "Branch number: $BRANCH_NUMBER"
+        
+        # Determine milestone based on branch number
+        if [ "$BRANCH_NUMBER" -ge 7151 ]; then
+          MILESTONE="M137"
+        elif [ "$BRANCH_NUMBER" -ge 7103 ]; then
+          MILESTONE="M136" 
+        elif [ "$BRANCH_NUMBER" -ge 7000 ]; then
+          MILESTONE="M135"
+        elif [ "$BRANCH_NUMBER" -ge 6845 ]; then
+          MILESTONE="M134"
+        else
+          MILESTONE="M$((134 - (6845 - BRANCH_NUMBER) / 100))"
+        fi
+        
+        echo "Detected milestone: $MILESTONE"
+        echo "WEBRTC_MILESTONE=$MILESTONE" >> $GITHUB_ENV
+        echo "WEBRTC_BRANCH_NUMBER=$BRANCH_NUMBER" >> $GITHUB_ENV
 
     - name: Free up disk space
       shell: bash
@@ -119,8 +146,8 @@ runs:
       shell: bash
       run: |
         cd webrtc-build/src
-        echo "Checking out WebRTC branch: branch-heads/7151"
-        git checkout branch-heads/7151
+        echo "Checking out WebRTC branch: ${{ inputs.webrtc_branch }}"
+        git checkout ${{ inputs.webrtc_branch }}
         gclient sync
 
     - name: Install build dependencies
@@ -163,17 +190,20 @@ runs:
           ARCH_ARGS="$ARCH_ARGS --arch $arch"
         done
         
-        AAR_FILENAME="libwebrtc-m137-${{ github.run_number }}.aar"
+        # Generate AAR filename with detected milestone
+        MILESTONE_LOWER=$(echo "$WEBRTC_MILESTONE" | tr '[:upper:]' '[:lower:]')
+        AAR_FILENAME="libwebrtc-${MILESTONE_LOWER}-${{ github.run_number }}.aar"
         echo "aar_filename=$AAR_FILENAME" >> $GITHUB_OUTPUT
         
         echo "Building WebRTC AAR with architectures: $ARCH_ARGS"
+        echo "Milestone: $WEBRTC_MILESTONE, Branch: ${{ inputs.webrtc_branch }}"
         python3 tools_webrtc/android/build_aar.py $ARCH_ARGS \
           --build-dir out/android \
           --output "$AAR_FILENAME" \
           --extra-gn-args "is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}"
         
         echo "download_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
-        echo "build_info=WebRTC M137 AAR built successfully" >> $GITHUB_OUTPUT
+        echo "build_info=WebRTC $WEBRTC_MILESTONE AAR built successfully" >> $GITHUB_OUTPUT
 
     - name: Send Slack notification
       if: ${{ inputs.enable_slack_notifications == 'true' && inputs.slack_webhook_url != '' }}
@@ -183,7 +213,7 @@ runs:
           curl -X POST -H 'Content-type: application/json' \
             --data '{
               "channel": "${{ inputs.slack_channel }}",
-              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Branch: `branch-heads/7151`\n• Architectures: `${{ inputs.target_arch }}`\n• Configuration: `${{ inputs.build_config }}`\n\n📦 *AAR File:* `${{ steps.build.outputs.aar_filename }}`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
+              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Milestone: `'$WEBRTC_MILESTONE'`\n• Branch: `${{ inputs.webrtc_branch }}`\n• Architectures: `${{ inputs.target_arch }}`\n• Configuration: `${{ inputs.build_config }}`\n\n📦 *AAR File:* `${{ steps.build.outputs.aar_filename }}`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
             }' \
             ${{ inputs.slack_webhook_url }}
         fi
