@@ -205,7 +205,7 @@ This action produces the following outputs:
 
 | Output         | Description                                                                         |
 |----------------|-------------------------------------------------------------------------------------|
-| `aar_filename` | The filename of the generated AAR package (e.g., `libwebrtc-m137-patched-123.aar`). |
+| `aar_filename` | The filename of the generated AAR package (e.g., `libwebrtc-m137-123.aar`). |
 | `download_url` | The URL to the GitHub Actions run where the build artifacts can be downloaded.      |
 | `build_info`   | A summary of the build information.                                                 |
 

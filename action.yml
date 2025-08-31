@@ -1,6 +1,6 @@
 name: 'WebRTC Android Builder'
-description: 'Builds WebRTC for Android. The resulting AAR is compatible with projects developed on any platform, including Apple Silicon Macs.'
-author: 'WebRTC Builder Contributors'
+description: 'Build WebRTC Android AAR files automatically in the cloud using GitHub Actions. Works on all platforms - Windows, macOS, and Linux.'
+author: 'bentleypark'
 
 branding:
   icon: 'smartphone'
@@ -16,9 +16,7 @@ inputs:
     description: 'Build configuration (release or debug)'
     required: false
     default: 'release'
-  
-  
-  
+
   slack_webhook_url:
     description: 'Slack webhook URL for notifications (optional)'
     required: false
@@ -121,7 +119,7 @@ runs:
       shell: bash
       run: |
         cd webrtc-build/src
-        echo "Checking out WebRTC branch: ${{ inputs.webrtc_branch }}"
+        echo "Checking out WebRTC branch: branch-heads/7151"
         git checkout branch-heads/7151
         gclient sync
 
@@ -130,8 +128,6 @@ runs:
       run: |
         cd webrtc-build/src
         sudo ./build/install-build-deps.sh --no-prompt --no-chromeos-fonts
-
-
 
     - name: Configure build
       shell: bash
@@ -151,8 +147,6 @@ runs:
           use_rtti=true
         '
         
-        
-        
         mkdir -p out/android
         gn gen out/android --args="$BUILD_ARGS"
 
@@ -169,7 +163,7 @@ runs:
           ARCH_ARGS="$ARCH_ARGS --arch $arch"
         done
         
-        AAR_FILENAME="libwebrtc-m137-patched-${{ github.run_number }}.aar"
+        AAR_FILENAME="libwebrtc-m137-${{ github.run_number }}.aar"
         echo "aar_filename=$AAR_FILENAME" >> $GITHUB_OUTPUT
         
         echo "Building WebRTC AAR with architectures: $ARCH_ARGS"
@@ -189,7 +183,7 @@ runs:
           curl -X POST -H 'Content-type: application/json' \
             --data '{
               "channel": "${{ inputs.slack_channel }}",
-              "text": "🎉 *WebRTC Android AAR 빌드 성공!*\n\n📋 *빌드 정보:*\n• Branch: `${{ inputs.webrtc_branch }}`\n• Architectures: `${{ inputs.target_arch }}`\n• Configuration: `${{ inputs.build_config }}`\n\n📦 *AAR 파일:* `${{ steps.build.outputs.aar_filename }}`\n\n🔗 [Artifacts 다운로드](${{ steps.build.outputs.download_url }})"
+              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Branch: `branch-heads/7151`\n• Architectures: `${{ inputs.target_arch }}`\n• Configuration: `${{ inputs.build_config }}`\n\n📦 *AAR File:* `${{ steps.build.outputs.aar_filename }}`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
             }' \
             ${{ inputs.slack_webhook_url }}
         fi
