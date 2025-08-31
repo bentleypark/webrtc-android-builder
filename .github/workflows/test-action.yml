@@ -9,9 +9,12 @@ on:
         default: 'branch-heads/7151'
         type: choice
         options:
-          - 'branch-heads/7151'
-          - 'branch-heads/7103'
-          - 'branch-heads/7050'
+          - 'branch-heads/7339'  # M140 (Latest)
+          - 'branch-heads/7258'  # M139
+          - 'branch-heads/7204'  # M138
+          - 'branch-heads/7151'  # M137 (Default)
+          - 'branch-heads/7103'  # M136
+          - 'branch-heads/7000'  # M135
       
       target_arch:
         description: 'Target architectures'
@@ -19,9 +22,11 @@ on:
         default: 'arm64-v8a'
         type: choice
         options:
-          - 'arm64-v8a'
-          - 'armeabi-v7a'
-          - 'armeabi-v7a,arm64-v8a'
+          - 'arm64-v8a'                    # ARM64 only (recommended for testing)
+          - 'armeabi-v7a'                  # ARM32 only
+          - 'armeabi-v7a,arm64-v8a'       # Both ARM architectures
+          - 'x86_64'                       # x86 64-bit (emulator)
+          - 'arm64-v8a,x86_64'            # ARM64 + x86_64 (most common)
       
       build_config:
         description: 'Build configuration'
@@ -38,13 +43,22 @@ on:
 jobs:
   test-action:
     runs-on: ubuntu-latest
-    timeout-minutes: 240  # 4 hours for full build
+    timeout-minutes: 300  # 5 hours for full build (increased for newer milestones)
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      - name: Display Test Configuration
+        run: |
+          echo "🚀 Starting WebRTC Android Builder Test"
+          echo "Branch: ${{ github.event.inputs.webrtc_branch || 'branch-heads/7151' }}"
+          echo "Architecture: ${{ github.event.inputs.target_arch || 'arm64-v8a' }}"
+          echo "Build Config: ${{ github.event.inputs.build_config || 'release' }}"
+          echo "Expected milestone: Will be detected dynamically"
+      
       - name: Test WebRTC Android Builder (Local Action)
+        id: webrtc_build
         uses: ./  # Use local action
         with:
           webrtc_branch: ${{ github.event.inputs.webrtc_branch || 'branch-heads/7151' }}
@@ -53,6 +67,25 @@ jobs:
           # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}  # Uncomment if you have Slack webhook
           # slack_channel: '#test-builds'
           # enable_slack_notifications: 'true'
+      
+      - name: Verify Build Output
+        if: success()
+        run: |
+          echo "🔍 Verifying build outputs..."
+          if [ -f webrtc-build/src/*.aar ]; then
+            AAR_FILE=$(ls webrtc-build/src/*.aar | head -1)
+            AAR_SIZE=$(stat -f%z "$AAR_FILE" 2>/dev/null || stat -c%s "$AAR_FILE" 2>/dev/null)
+            AAR_SIZE_MB=$((AAR_SIZE / 1024 / 1024))
+            echo "✅ AAR file found: $(basename "$AAR_FILE")"
+            echo "📏 Size: ${AAR_SIZE_MB}MB"
+            
+            # Verify AAR structure (optional)
+            echo "📦 AAR contents:"
+            unzip -l "$AAR_FILE" | head -20
+          else
+            echo "❌ No AAR file found in webrtc-build/src/"
+            exit 1
+          fi
       
       - name: Upload Test Artifacts
         uses: actions/upload-artifact@v4
@@ -66,8 +99,21 @@ jobs:
       - name: Test Results Summary
         if: always()
         run: |
-          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧪 WebRTC Android Builder Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: ${{ github.event.inputs.webrtc_branch || 'branch-heads/7151' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Architecture**: ${{ github.event.inputs.target_arch || 'arm64-v8a' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Config**: ${{ github.event.inputs.build_config || 'release' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Config**: ${{ github.event.inputs.build_config || 'release' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Information" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "- **AAR Filename**: ${{ steps.webrtc_build.outputs.aar_filename }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Build Info**: ${{ steps.webrtc_build.outputs.build_info }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Download URL**: ${{ steps.webrtc_build.outputs.download_url }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Test completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Test failed. Check logs for details.**" >> $GITHUB_STEP_SUMMARY
+          fi
