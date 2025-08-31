@@ -1,0 +1,73 @@
+name: Test WebRTC Android Builder Action
+
+on:
+  workflow_dispatch:
+    inputs:
+      webrtc_branch:
+        description: 'WebRTC branch to test'
+        required: false
+        default: 'branch-heads/7151'
+        type: choice
+        options:
+          - 'branch-heads/7151'
+          - 'branch-heads/7103'
+          - 'branch-heads/7050'
+      
+      target_arch:
+        description: 'Target architectures'
+        required: false
+        default: 'arm64-v8a'
+        type: choice
+        options:
+          - 'arm64-v8a'
+          - 'armeabi-v7a'
+          - 'armeabi-v7a,arm64-v8a'
+      
+      build_config:
+        description: 'Build configuration'
+        required: false
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+  push:
+    branches: [ test-* ]
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240  # 4 hours for full build
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test WebRTC Android Builder (Local Action)
+        uses: ./  # Use local action
+        with:
+          webrtc_branch: ${{ github.event.inputs.webrtc_branch || 'branch-heads/7151' }}
+          target_arch: ${{ github.event.inputs.target_arch || 'arm64-v8a' }}
+          build_config: ${{ github.event.inputs.build_config || 'release' }}
+          # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}  # Uncomment if you have Slack webhook
+          # slack_channel: '#test-builds'
+          # enable_slack_notifications: 'true'
+      
+      - name: Upload Test Artifacts
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: test-webrtc-aar-${{ github.run_number }}
+          path: |
+            webrtc-build/src/*.aar
+          retention-days: 7
+      
+      - name: Test Results Summary
+        if: always()
+        run: |
+          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.event.inputs.webrtc_branch || 'branch-heads/7151' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Architecture**: ${{ github.event.inputs.target_arch || 'arm64-v8a' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Config**: ${{ github.event.inputs.build_config || 'release' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
