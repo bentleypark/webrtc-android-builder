@@ -37,6 +37,7 @@ inputs:
     required: false
     default: 'false'
 
+
 outputs:
   aar_filename:
     description: 'Generated AAR filename'
@@ -61,86 +62,9 @@ runs:
         echo "Architectures: ${{ inputs.target_arch }}"
         echo "Configuration: ${{ inputs.build_config }}"
         
-        # Extract branch number and determine milestone
-        BRANCH_NUMBER=$(echo "${{ inputs.webrtc_branch }}" | sed 's/.*branch-heads\///')
-        echo "Branch number: $BRANCH_NUMBER"
-        
-        # Attempt to fetch milestone dynamically from Chromium Dash
-        echo "Attempting to fetch milestone information from Chromium Dash..."
-        
-        # Try to fetch from chromiumdash API (fallback to static mapping if fails)
-        MILESTONE=""
-        if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-          # Try multiple endpoints to find branch-milestone mapping
-          echo "Fetching branch information from Chromium Dash API..."
-          
-          # Method 1: Try branches endpoint (if it exists)
-          BRANCHES_RESPONSE=$(curl -s --max-time 15 "https://chromiumdash.appspot.com/api/v0/branches" 2>/dev/null || echo "")
-          
-          # Method 2: Try releases endpoint for recent releases
-          if [ -z "$BRANCHES_RESPONSE" ] || ! echo "$BRANCHES_RESPONSE" | jq empty >/dev/null 2>&1; then
-            echo "Trying releases endpoint..."
-            RELEASES_RESPONSE=$(curl -s --max-time 15 "https://chromiumdash.appspot.com/fetch_releases?num=100" 2>/dev/null || echo "")
-            
-            if [ -n "$RELEASES_RESPONSE" ] && echo "$RELEASES_RESPONSE" | jq empty >/dev/null 2>&1; then
-              echo "Successfully fetched releases data, analyzing for branch $BRANCH_NUMBER..."
-              
-              # Try to find milestone from releases data that might contain branch information
-              # This is a simplified approach - real implementation would need to understand the API structure
-              POTENTIAL_MILESTONE=$(echo "$RELEASES_RESPONSE" | jq -r --arg branch "$BRANCH_NUMBER" '
-                .[] | 
-                select(.branch_base_position? and (.branch_base_position | tonumber) <= ($branch | tonumber)) |
-                .version | 
-                split(".")[0] | 
-                ltrimstr("1") | 
-                if length > 0 then "M" + . else empty end
-              ' 2>/dev/null | head -1)
-              
-              if [ -n "$POTENTIAL_MILESTONE" ] && [ "$POTENTIAL_MILESTONE" != "null" ]; then
-                MILESTONE="$POTENTIAL_MILESTONE"
-                echo "Successfully determined milestone from API: $MILESTONE"
-              else
-                echo "Could not determine milestone from API response"
-              fi
-            fi
-          fi
-          
-          # If API fetch failed, log it
-          if [ -z "$MILESTONE" ]; then
-            echo "Dynamic milestone detection failed, falling back to static mapping"
-          fi
-        else
-          echo "curl or jq not available, using static mapping"
-        fi
-        
-        # Static milestone mapping (accurate as of 2024)
-        if [ -z "$MILESTONE" ]; then
-          echo "Using static milestone mapping..."
-          if [ "$BRANCH_NUMBER" -ge 7339 ]; then
-            MILESTONE="M140"
-          elif [ "$BRANCH_NUMBER" -ge 7258 ]; then
-            MILESTONE="M139"
-          elif [ "$BRANCH_NUMBER" -ge 7204 ]; then
-            MILESTONE="M138"
-          elif [ "$BRANCH_NUMBER" -ge 7151 ]; then
-            MILESTONE="M137"
-          elif [ "$BRANCH_NUMBER" -ge 7103 ]; then
-            MILESTONE="M136" 
-          elif [ "$BRANCH_NUMBER" -ge 7000 ]; then
-            MILESTONE="M135"
-          elif [ "$BRANCH_NUMBER" -ge 6845 ]; then
-            MILESTONE="M134"
-          elif [ "$BRANCH_NUMBER" -ge 6723 ]; then
-            MILESTONE="M133"
-          else
-            # Fallback calculation for very old versions
-            MILESTONE="M$((133 - (6723 - BRANCH_NUMBER) / 100))"
-          fi
-        fi
-        
+        MILESTONE="${{ inputs.webrtc_milestone }}"
         echo "Detected milestone: $MILESTONE"
         echo "WEBRTC_MILESTONE=$MILESTONE" >> $GITHUB_ENV
-        echo "WEBRTC_BRANCH_NUMBER=$BRANCH_NUMBER" >> $GITHUB_ENV
 
     - name: Free up disk space
       shell: bash
@@ -250,9 +174,7 @@ runs:
           ARCH_ARGS="$ARCH_ARGS --arch $arch"
         done
         
-        # Generate AAR filename with detected milestone
-        MILESTONE_LOWER=$(echo "$WEBRTC_MILESTONE" | tr '[:upper:]' '[:lower:]')
-        AAR_FILENAME="libwebrtc-${MILESTONE_LOWER}-${{ github.run_number }}.aar"
+        AAR_FILENAME="libwebrtc.aar"
         echo "aar_filename=$AAR_FILENAME" >> $GITHUB_OUTPUT
         
         echo "Building WebRTC AAR with architectures: $ARCH_ARGS"
