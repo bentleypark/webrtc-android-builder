@@ -92,19 +92,45 @@ runs:
           else
             MILESTONE="133"
           fi
+          
+          # For static mapping, we can't determine exact patch numbers
+          # But we can use the branch number as BUILD and estimate
+          MINOR="0"
+          BUILD="$BRANCH_NUMBER"
+          PATCH="0"
+          FULL_VERSION="${MILESTONE}.${BUILD}.${PATCH}"
+          
           echo "Using static mapping: M$MILESTONE"
+          echo "   Estimated version: $FULL_VERSION"
         else
-          # Parse milestone from VERSION file
-          MILESTONE=$(printf "%s" "$VERSION_B64" | base64 -d | awk -F= '/^MAJOR=/{print $2}')
+          # Parse milestone and version info from VERSION file
+          VERSION_CONTENT=$(printf "%s" "$VERSION_B64" | base64 -d)
+          MILESTONE=$(echo "$VERSION_CONTENT" | awk -F= '/^MAJOR=/{print $2}')
+          MINOR=$(echo "$VERSION_CONTENT" | awk -F= '/^MINOR=/{print $2}')
+          BUILD=$(echo "$VERSION_CONTENT" | awk -F= '/^BUILD=/{print $2}')
+          PATCH=$(echo "$VERSION_CONTENT" | awk -F= '/^PATCH=/{print $2}')
+          
           if [[ -z "${MILESTONE:-}" ]]; then
             echo "❌ Could not parse MAJOR from chrome/VERSION" >&2
             exit 1
           fi
-          echo "✅ Successfully detected milestone from Gitiles API: M$MILESTONE"
+          
+          # Create full version string (skip MINOR since it's usually 0)
+          FULL_VERSION="${MILESTONE}.${BUILD}.${PATCH}"
+          
+          echo "✅ Successfully detected version from Gitiles API:"
+          echo "   Milestone: M$MILESTONE"
+          echo "   Full Version: $FULL_VERSION"
+          echo "   Build: $BUILD"
+          echo "   Patch: $PATCH"
         fi
         
         echo "WEBRTC_MILESTONE=$MILESTONE" >> $GITHUB_ENV
-        echo "Final milestone: M$MILESTONE"
+        echo "WEBRTC_MINOR=$MINOR" >> $GITHUB_ENV
+        echo "WEBRTC_BUILD=$BUILD" >> $GITHUB_ENV
+        echo "WEBRTC_PATCH=$PATCH" >> $GITHUB_ENV
+        echo "WEBRTC_FULL_VERSION=$FULL_VERSION" >> $GITHUB_ENV
+        echo "Final milestone: M$MILESTONE ($FULL_VERSION)"
 
     - name: Free up disk space
       shell: bash
@@ -214,19 +240,23 @@ runs:
           ARCH_ARGS="$ARCH_ARGS --arch $arch"
         done
         
-        # Generate AAR filename with detected milestone
-        AAR_FILENAME="libwebrtc-m${WEBRTC_MILESTONE}-${{ github.run_number }}.aar"
+        # Generate AAR filename with detailed version info
+        if [ -n "${WEBRTC_FULL_VERSION:-}" ]; then
+          AAR_FILENAME="libwebrtc-${WEBRTC_FULL_VERSION}.aar"
+        else
+          AAR_FILENAME="libwebrtc-m${WEBRTC_MILESTONE}.aar"
+        fi
         echo "aar_filename=$AAR_FILENAME" >> $GITHUB_OUTPUT
         
         echo "Building WebRTC AAR with architectures: $ARCH_ARGS"
-        echo "Milestone: M$WEBRTC_MILESTONE, Branch: ${{ inputs.webrtc_branch }}"
+        echo "Version: M$WEBRTC_MILESTONE ($WEBRTC_FULL_VERSION), Branch: ${{ inputs.webrtc_branch }}"
         python3 tools_webrtc/android/build_aar.py $ARCH_ARGS \
           --build-dir out/android \
           --output "$AAR_FILENAME" \
           --extra-gn-args "is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}"
         
         echo "download_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
-        echo "build_info=WebRTC M$WEBRTC_MILESTONE AAR built successfully" >> $GITHUB_OUTPUT
+        echo "build_info=WebRTC M$WEBRTC_MILESTONE ($WEBRTC_FULL_VERSION) AAR built successfully" >> $GITHUB_OUTPUT
 
     - name: Send Slack notification
       if: ${{ inputs.enable_slack_notifications == 'true' && inputs.slack_webhook_url != '' }}
@@ -236,7 +266,7 @@ runs:
           curl -X POST -H 'Content-type: application/json' \
             --data '{
               "channel": "${{ inputs.slack_channel }}",
-              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Milestone: \`M$WEBRTC_MILESTONE\`\n• Branch: \`${{ inputs.webrtc_branch }}\`\n• Architectures: \`${{ inputs.target_arch }}\`\n• Configuration: \`${{ inputs.build_config }}\`\n\n📦 *AAR File:* \`${{ steps.build.outputs.aar_filename }}\`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
+              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Milestone: \`M$WEBRTC_MILESTONE\`\n• Version: \`$WEBRTC_FULL_VERSION\`\n• Branch: \`${{ inputs.webrtc_branch }}\`\n• Build: \`$WEBRTC_BUILD\`\n• Patch: \`$WEBRTC_PATCH\`\n• Architectures: \`${{ inputs.target_arch }}\`\n• Configuration: \`${{ inputs.build_config }}\`\n\n📦 *AAR File:* \`${{ steps.build.outputs.aar_filename }}\`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
             }' \
             ${{ inputs.slack_webhook_url }}
         fi
