@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# WebRTC AAR 자동 다운로드 스크립트
-# GitHub CLI를 사용하여 최신 빌드 아티팩트를 다운로드합니다.
+# WebRTC AAR Automatic Download Script
+# Downloads the latest build artifacts using GitHub CLI.
 
 set -euo pipefail
 
-# 색상 설정
+# Color settings
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -24,40 +24,40 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 도움말
+# Help message
 show_help() {
     cat << EOF
-WebRTC AAR 자동 다운로드 스크립트
+WebRTC AAR Automatic Download Script
 
-사용법: $0 [옵션]
+Usage: $0 [OPTIONS]
 
-옵션:
-  -r, --repo REPO         GitHub 저장소 (예: username/webrtc-android-builder)
-  -o, --output DIR        출력 디렉토리 (기본: current directory)
-  -l, --list             사용 가능한 아티팩트 목록만 표시
-  -h, --help             이 도움말 표시
+Options:
+  -r, --repo REPO         GitHub Repository (e.e.g., username/webrtc-android-builder)
+  -o, --output DIR        Output directory (default: current directory)
+  -l, --list              Only list available artifacts
+  -h, --help              Show this help message
 
-필수 조건:
-  - GitHub CLI (gh) 설치 및 인증 필요
-  - 저장소 접근 권한 필요
+Prerequisites:
+  - GitHub CLI (gh) installed and authenticated
+  - Repository access permissions required
 
-예시:
+Example:
   $0 -r username/webrtc-android-builder -o ~/Downloads
   $0 --list -r username/webrtc-android-builder
 
-GitHub CLI 설치:
+GitHub CLI Installation:
   brew install gh
   gh auth login
 
 EOF
 }
 
-# 기본값
+# Default values
 REPO=""
 OUTPUT_DIR="."
 LIST_ONLY=false
 
-# 인수 파싱
+# Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         -r|--repo)
@@ -77,130 +77,130 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         *)
-            log_error "알 수 없는 옵션: $1"
+            log_error "Unknown option: $1"
             show_help
             exit 1
             ;;
     esac
 done
 
-# 필수 검사
+# Essential checks
 if [[ -z "$REPO" ]]; then
-    log_error "저장소를 지정해야 합니다. -r 또는 --repo 옵션을 사용하세요."
+    log_error "Repository must be specified. Use -r or --repo option."
     show_help
     exit 1
 fi
 
-# GitHub CLI 설치 확인
+# Check GitHub CLI installation
 if ! command -v gh &> /dev/null; then
-    log_error "GitHub CLI (gh)가 설치되어 있지 않습니다."
-    log_info "설치 방법: brew install gh"
+    log_error "GitHub CLI (gh) is not installed."
+    log_info "Installation method: brew install gh"
     exit 1
 fi
 
-# GitHub 인증 확인
+# Check GitHub authentication
 if ! gh auth status &> /dev/null; then
-    log_error "GitHub CLI 인증이 필요합니다."
-    log_info "인증 방법: gh auth login"
+    log_error "GitHub CLI authentication is required."
+    log_info "Authentication method: gh auth login"
     exit 1
 fi
 
-# 워크플로우 실행 목록 가져오기
-log_info "워크플로우 실행 목록을 가져오는 중..."
+# Get workflow run list
+log_info "Fetching workflow run list..."
 RUNS=$(gh run list --repo "$REPO" --workflow "build-webrtc-android.yml" --status completed --limit 10 --json databaseId,headBranch,conclusion,createdAt,displayTitle)
 
 if [[ -z "$RUNS" || "$RUNS" == "[]" ]]; then
-    log_error "완료된 워크플로우 실행을 찾을 수 없습니다."
-    log_info "저장소에서 성공적으로 완료된 빌드가 있는지 확인하세요."
+    log_error "No completed workflow runs found."
+    log_info "Please ensure there are successfully completed builds in the repository."
     exit 1
 fi
 
-# 성공한 실행만 필터링
+# Filter for successful runs
 SUCCESS_RUNS=$(echo "$RUNS" | jq '[.[] | select(.conclusion == "success")]')
 
 if [[ "$SUCCESS_RUNS" == "[]" ]]; then
-    log_error "성공한 워크플로우 실행을 찾을 수 없습니다."
+    log_error "No successful workflow runs found."
     exit 1
 fi
 
-# 최신 성공 실행 가져오기
+# Get the latest successful run
 LATEST_RUN_ID=$(echo "$SUCCESS_RUNS" | jq -r '.[0].databaseId')
 LATEST_RUN_TITLE=$(echo "$SUCCESS_RUNS" | jq -r '.[0].displayTitle')
 LATEST_RUN_DATE=$(echo "$SUCCESS_RUNS" | jq -r '.[0].createdAt')
 
-log_info "최신 성공 빌드 정보:"
+log_info "Latest successful build info:"
 echo "  📋 Title: $LATEST_RUN_TITLE"
-echo "  🆔 Run ID: $LATEST_RUN_ID"  
+echo "Artifact ID: $ARTIFACT_ID"  
 echo "  📅 Date: $LATEST_RUN_DATE"
 
-# 아티팩트 목록만 표시하고 종료
+# Display artifact list only and exit
 if [[ "$LIST_ONLY" == "true" ]]; then
-    log_info "사용 가능한 아티팩트:"
+    log_info "Available artifacts:"
     gh run view "$LATEST_RUN_ID" --repo "$REPO" --log-failed
     exit 0
 fi
 
-# 아티팩트 목록 가져오기
-log_info "아티팩트 목록을 가져오는 중..."
+# Get artifact list
+log_info "Fetching artifact list..."
 ARTIFACTS=$(gh api "repos/$REPO/actions/runs/$LATEST_RUN_ID/artifacts" --jq '.artifacts[] | select(.name | startswith("webrtc-android-aar"))')
 
 if [[ -z "$ARTIFACTS" ]]; then
-    log_error "WebRTC AAR 아티팩트를 찾을 수 없습니다."
+    log_error "WebRTC AAR artifact not found."
     exit 1
 fi
 
-# 첫 번째 아티팩트 정보 추출
+# Extract first artifact info
 ARTIFACT_NAME=$(echo "$ARTIFACTS" | jq -r '.name' | head -1)
 ARTIFACT_SIZE=$(echo "$ARTIFACTS" | jq -r '.size_in_bytes' | head -1)
 ARTIFACT_SIZE_MB=$((ARTIFACT_SIZE / 1024 / 1024))
 
-log_info "다운로드할 아티팩트:"
+log_info "Artifact to download:"
 echo "  📦 Name: $ARTIFACT_NAME"
 echo "  📏 Size: ${ARTIFACT_SIZE_MB}MB"
 
-# 출력 디렉토리 생성
+# Create output directory
 mkdir -p "$OUTPUT_DIR"
 cd "$OUTPUT_DIR"
 
-# 아티팩트 다운로드
-log_info "아티팩트 다운로드 중... (위치: $OUTPUT_DIR)"
+# Download artifact
+log_info "Downloading artifact... (Location: $OUTPUT_DIR)"
 if gh run download "$LATEST_RUN_ID" --repo "$REPO" --name "$ARTIFACT_NAME"; then
-    log_info "✅ 다운로드 완료!"
+    log_info "✅ Download complete!"
     
-    # 압축 해제
+    # Extract archive
     if [[ -f "${ARTIFACT_NAME}.zip" ]]; then
-        log_info "압축 해제 중..."
+        log_info "Extracting archive..."
         unzip -o "${ARTIFACT_NAME}.zip"
         rm "${ARTIFACT_NAME}.zip"
     fi
     
-    # 결과 확인
+    # Check result
     if [[ -f "libwebrtc.aar" ]]; then
         AAR_SIZE=$(stat -f%z "libwebrtc.aar" 2>/dev/null || stat -c%s "libwebrtc.aar" 2>/dev/null)
         AAR_SIZE_MB=$((AAR_SIZE / 1024 / 1024))
         
-        log_info "🎉 WebRTC AAR 다운로드 성공!"
-        echo "  📁 위치: $(pwd)/libwebrtc.aar"
-        echo "  📏 크기: ${AAR_SIZE_MB}MB"
+        log_info "🎉 WebRTC AAR download successful!"
+        echo "  📁 Location: $(pwd)/libwebrtc.aar"
+        echo "  📏 Size: ${AAR_SIZE_MB}MB"
         
         if [[ -f "build-info.txt" ]]; then
-            echo "  📋 빌드 정보: $(pwd)/build-info.txt"
+            echo "  📋 Build Info: $(pwd)/build-info.txt"
             echo ""
-            echo "=== 빌드 정보 ==="
+            echo "=== Build Info ==="
             head -20 build-info.txt
         fi
         
         echo ""
-        log_info "Android 프로젝트 통합 방법:"
-        echo "  1. AAR 파일을 app/libs/ 폴더에 복사"
-        echo "  2. build.gradle에 의존성 추가: implementation files('libs/libwebrtc.aar')"
-        echo "  3. minSdk를 24로 설정 (16KB 페이지 지원)"
+        log_info "How to integrate into Android project:"
+        echo "  1. Copy AAR file to app/libs/ folder"
+        echo "  2. Add dependency to build.gradle: implementation files('libs/libwebrtc.aar')"
+        echo "  3. Set minSdk to 24 (for 16KB page support)"
         
     else
-        log_error "libwebrtc.aar 파일을 찾을 수 없습니다."
+        log_error "libwebrtc.aar file not found."
         exit 1
     fi
 else
-    log_error "다운로드 실패"
+    log_error "Download failed"
     exit 1
 fi
