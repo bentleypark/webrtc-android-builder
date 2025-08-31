@@ -92,7 +92,6 @@ git push -u origin main
    - **WebRTC Branch**: `branch-heads/7151` (M137, latest)
    - **Target Architectures**: `armeabi-v7a,arm64-v8a`
    - **Build Configuration**: `release`
-   - **16KB Page Support**: `true` (handled by WebRTC build system)
 5. Click **Run workflow** button
 
 ### Step 4: Download AAR

@@ -21,11 +21,11 @@ on:
         options:
         - release
         - debug
-      enable_16kb_pages:
-        description: 'Enable 16KB page size support'
-        required: false
-        default: true
-        type: boolean
+      # enable_16kb_pages:
+      #   description: 'Enable 16KB page size support'
+      #   required: false
+      #   default: true
+      #   type: boolean
       enable_slack_notifications:
         description: 'Enable Slack notifications'
         required: false
@@ -174,10 +174,7 @@ jobs:
           use_rtti=true
         '
         
-        if [ "${{ inputs.enable_16kb_pages }}" = "true" ]; then
-          BUILD_ARGS="$BUILD_ARGS
-          android_64bit_target_cpu=true"
-        fi
+        # 16KB page size support is handled by WebRTC build system
         
         mkdir -p out/android
         gn gen out/android --args="$BUILD_ARGS"
@@ -249,7 +246,7 @@ jobs:
         🕒 Commit Date: $COMMIT_DATE
         🏗️  Target Architectures: ${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}
         ⚙️  Build Configuration: ${{ inputs.build_config || 'release' }}
-        📏 16KB Page Support: ${{ inputs.enable_16kb_pages || 'true' }}
+        📏 WebRTC Version: M137
         🖥️  Build Environment: $(uname -a)
         🐍 Python Version: $(python3 --version)
         🔧 Builder: GitHub Actions
@@ -289,7 +286,7 @@ jobs:
           • Branch: `${{ inputs.webrtc_branch || 'branch-heads/7151' }}`
           • Architectures: `${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}`
           • Configuration: `${{ inputs.build_config || 'release' }}`
-          • 16KB Pages: `${{ inputs.enable_16kb_pages || 'true' }}`
+          • Version: `M137`
           
           📦 *AAR 파일:* `libwebrtc-m137-${{ github.run_number }}.aar`
           
@@ -332,7 +329,7 @@ jobs:
     #       - **WebRTC Branch**: ${{ inputs.webrtc_branch || 'branch-heads/7151' }}
     #       - **Target Architectures**: ${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}
     #       - **Build Configuration**: ${{ inputs.build_config || 'release' }}
-    #       - **16KB Page Support**: ${{ inputs.enable_16kb_pages || 'true' }}
+    #       - **WebRTC Version**: M137
     #       - **Build Date**: ${{ github.run_id }}
     #       
     #       ## 📱 Android Integration
@@ -378,7 +375,7 @@ jobs:
         echo "- **Branch**: ${{ inputs.webrtc_branch || 'branch-heads/7151' }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Architectures**: ${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}" >> $GITHUB_STEP_SUMMARY  
         echo "- **Configuration**: ${{ inputs.build_config || 'release' }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **16KB Pages**: ${{ inputs.enable_16kb_pages || 'true' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: M137" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📦 Download" >> $GITHUB_STEP_SUMMARY
         echo "Check the **Artifacts** section above to download your AAR file!" >> $GITHUB_STEP_SUMMARY
