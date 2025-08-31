@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       webrtc_branch:
-        description: 'WebRTC branch to build (e.g., branch-heads/6845, branch-heads/6478)'
+        description: 'WebRTC branch to build (e.g., branch-heads/7151, branch-heads/6845)'
         required: true
-        default: 'branch-heads/6845'
+        default: 'branch-heads/7151'
         type: string
       target_arch:
         description: 'Target architectures (comma separated)'
@@ -132,8 +132,8 @@ jobs:
         cd webrtc-build/src
         
         # 지정된 브랜치로 체크아웃
-        echo "Checking out WebRTC branch: ${{ inputs.webrtc_branch || 'branch-heads/6478' }}"
-        git checkout ${{ inputs.webrtc_branch || 'branch-heads/6478' }}
+        echo "Checking out WebRTC branch: ${{ inputs.webrtc_branch || 'branch-heads/7151' }}"
+        git checkout ${{ inputs.webrtc_branch || 'branch-heads/7151' }}
         gclient sync
         
     - name: Install build dependencies
@@ -143,17 +143,17 @@ jobs:
         # Linux 빌드 의존성 설치 (Android 포함)
         sudo ./build/install-build-deps.sh --no-prompt --no-chromeos-fonts
         
-    - name: Apply 16KB page size patches (if enabled)
-      if: ${{ inputs.enable_16kb_pages == true }}
-      run: |
-        cd webrtc-build/src
-        
-        # 16KB 페이지 크기 지원을 위한 설정
-        echo "Applying 16KB page size optimizations..."
-        
-        # Android minSdkVersion을 24로 설정 (16KB 페이지 크기 지원)
-        find . -name "*.gni" -o -name "*.gn" | xargs grep -l "min_sdk_version.*=.*23" | \
-        xargs sed -i 's/min_sdk_version.*=.*23/min_sdk_version = 24/g' || true
+    # - name: Apply 16KB page size patches (if enabled)
+    #   if: ${{ inputs.enable_16kb_pages == true }}
+    #   run: |
+    #     cd webrtc-build/src
+    #     
+    #     # 16KB 페이지 크기 지원을 위한 설정
+    #     echo "Applying 16KB page size optimizations..."
+    #     
+    #     # Android minSdkVersion을 24로 설정 (16KB 페이지 크기 지원)
+    #     find . -name "*.gni" -o -name "*.gn" | xargs grep -l "min_sdk_version.*=.*23" | \
+    #     xargs sed -i 's/min_sdk_version.*=.*23/min_sdk_version = 24/g' || true
         
     - name: Configure build
       run: |
@@ -198,8 +198,8 @@ jobs:
         echo "Building WebRTC AAR with architectures: $ARCH_ARGS"
         echo "Build configuration: ${{ inputs.build_config || 'release' }}"
         
-        # AAR 파일명 생성 (M130, patched 형식)
-        AAR_FILENAME="libwebrtc-m130-patched-${{ github.run_number }}.aar"
+        # AAR 파일명 생성 (M137 형식)
+        AAR_FILENAME="libwebrtc-m137-${{ github.run_number }}.aar"
         echo "AAR filename: $AAR_FILENAME"
         
         # AAR 빌드 실행
@@ -212,7 +212,7 @@ jobs:
       run: |
         cd webrtc-build/src
         
-        AAR_FILENAME="libwebrtc-m130-patched-${{ github.run_number }}.aar"
+        AAR_FILENAME="libwebrtc-m137-${{ github.run_number }}.aar"
         
         if [ ! -f "$AAR_FILENAME" ]; then
           echo "❌ AAR file not found: $AAR_FILENAME"
@@ -234,7 +234,7 @@ jobs:
       run: |
         cd webrtc-build/src
         
-        AAR_FILENAME="libwebrtc-m130-patched-${{ github.run_number }}.aar"
+        AAR_FILENAME="libwebrtc-m137-${{ github.run_number }}.aar"
         COMMIT_HASH=$(git rev-parse HEAD)
         COMMIT_DATE=$(git log -1 --format="%ci")
         BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
@@ -244,7 +244,7 @@ jobs:
         =============================================
         
         📅 Build Date: $(date -u)
-        🌿 WebRTC Branch: $BRANCH_NAME (${{ inputs.webrtc_branch || 'branch-heads/6478' }})
+        🌿 WebRTC Branch: $BRANCH_NAME (${{ inputs.webrtc_branch || 'branch-heads/7151' }})
         📝 Commit Hash: $COMMIT_HASH
         🕒 Commit Date: $COMMIT_DATE
         🏗️  Target Architectures: ${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}
@@ -271,7 +271,7 @@ jobs:
       with:
         name: webrtc-android-aar-${{ github.run_number }}
         path: |
-          webrtc-build/src/libwebrtc-m130-patched-${{ github.run_number }}.aar
+          webrtc-build/src/libwebrtc-m137-${{ github.run_number }}.aar
           webrtc-build/src/build-info.txt
         retention-days: 90
         compression-level: 6
@@ -286,12 +286,12 @@ jobs:
           🎉 *WebRTC Android AAR 빌드 성공!*
           
           📋 *빌드 정보:*
-          • Branch: `${{ inputs.webrtc_branch || 'branch-heads/6845' }}`
+          • Branch: `${{ inputs.webrtc_branch || 'branch-heads/7151' }}`
           • Architectures: `${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}`
           • Configuration: `${{ inputs.build_config || 'release' }}`
           • 16KB Pages: `${{ inputs.enable_16kb_pages || 'true' }}`
           
-          📦 *AAR 파일:* `libwebrtc-m130-patched-${{ github.run_number }}.aar`
+          📦 *AAR 파일:* `libwebrtc-m137-${{ github.run_number }}.aar`
           
           🔗 [Artifacts 다운로드](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           ⏱️ 빌드 완료: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
@@ -309,7 +309,7 @@ jobs:
           ❌ *WebRTC Android AAR 빌드 실패!*
           
           📋 *빌드 정보:*
-          • Branch: `${{ inputs.webrtc_branch || 'branch-heads/6845' }}`
+          • Branch: `${{ inputs.webrtc_branch || 'branch-heads/7151' }}`
           • Configuration: `${{ inputs.build_config || 'release' }}`
           
           🔍 [빌드 로그 확인](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
@@ -323,13 +323,13 @@ jobs:
     #   uses: softprops/action-gh-release@v1
     #   with:
     #     files: |
-    #       webrtc-build/src/libwebrtc-m130-patched-${{ github.run_number }}.aar
+    #       webrtc-build/src/libwebrtc-m137-${{ github.run_number }}.aar
     #       webrtc-build/src/build-info.txt
     #     body: |
     #       # 🚀 WebRTC Android AAR Release
     #       
     #       ## 📋 Build Information
-    #       - **WebRTC Branch**: ${{ inputs.webrtc_branch || 'branch-heads/6845' }}
+    #       - **WebRTC Branch**: ${{ inputs.webrtc_branch || 'branch-heads/7151' }}
     #       - **Target Architectures**: ${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}
     #       - **Build Configuration**: ${{ inputs.build_config || 'release' }}
     #       - **16KB Page Support**: ${{ inputs.enable_16kb_pages || 'true' }}
@@ -348,7 +348,7 @@ jobs:
     #       }
     #       
     #       dependencies {
-    #           implementation files('libs/libwebrtc-m130-patched-5.aar')
+    #           implementation files('libs/libwebrtc-m137-5.aar')
     #       }
     #       ```
     #       
@@ -359,7 +359,7 @@ jobs:
     #       ```
     #       
     #       ## 🔧 Usage
-    #       1. Download `libwebrtc-m130-patched-5.aar` 
+    #       1. Download `libwebrtc-m137-5.aar` 
     #       2. Place in your Android project's `app/libs/` directory
     #       3. Add to your `build.gradle` dependencies
     #       4. Rebuild your project
@@ -375,7 +375,7 @@ jobs:
         echo "## 🎉 WebRTC Android AAR Build Completed!" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📋 Build Details" >> $GITHUB_STEP_SUMMARY
-        echo "- **Branch**: ${{ inputs.webrtc_branch || 'branch-heads/6478' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: ${{ inputs.webrtc_branch || 'branch-heads/7151' }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Architectures**: ${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}" >> $GITHUB_STEP_SUMMARY  
         echo "- **Configuration**: ${{ inputs.build_config || 'release' }}" >> $GITHUB_STEP_SUMMARY
         echo "- **16KB Pages**: ${{ inputs.enable_16kb_pages || 'true' }}" >> $GITHUB_STEP_SUMMARY

@@ -1,29 +1,29 @@
 # 🚀 WebRTC Android Builder
 
-**Universal WebRTC Android AAR Build System for All Mac Users**
+**Universal WebRTC Android AAR Build System**
 
-Build WebRTC Android libraries automatically in the cloud using GitHub Actions, eliminating local build complexity and compatibility issues across all Mac architectures (M1, M2, M3, M4, and Intel).
+Build WebRTC Android libraries automatically in the cloud using GitHub Actions, eliminating local build complexity and compatibility issues across all platforms.
 
 ## ✨ Key Features
 
-- 🍎 **Universal Mac Support** - Works on all Mac architectures (M1, M2, M3, M4, Intel)
+- 🌐 **Universal Platform Support** - Works on all operating systems (Windows, macOS, Linux)
 - ☁️ **Zero Local Resources** - No local build environment required
 - ⚡ **Fast Cloud Build** - 2.5 hours vs local 4-8 hours
-- 🎯 **Latest WebRTC** - M130 (branch-heads/6845) default support
-- 📱 **16KB Page Size Support** - Latest Android compatibility
+- 🎯 **Latest WebRTC** - M137 (branch-heads/7151) default support
+- 📱 **Android Compatibility** - Latest WebRTC features
 - 🔄 **Full Automation** - Push, tag, and scheduled builds
 - 📦 **Ready to Use** - Direct AAR file download
 - 💬 **Slack Integration** - Build notifications with results
-- 🛡️ **Security Enhanced** - Post-Quantum Cryptography ready
+- 🛡️ **Security Enhanced** - Latest security patches included
 
 ## 🏗️ Build Architecture
 
 ### Cloud Build Pipeline
 ```
 ┌─────────────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Any Mac (Client)      │───▶│  GitHub Actions  │───▶│   Build Result  │
+│   Any Device (Client)   │───▶│  GitHub Actions  │───▶│   Build Result  │
 │                         │    │                  │    │                 │
-│ • M1/M2/M3/M4/Intel     │    │ • Ubuntu 22.04   │    │ • AAR File      │
+│ • Windows/macOS/Linux   │    │ • Ubuntu 22.04   │    │ • AAR File      │
 │ • Simple Git Push       │    │ • depot_tools     │    │ • Build Info    │
 │ • Zero Local Resources  │    │ • WebRTC Source   │    │ • Artifacts     │
 └─────────────────────────┘    └──────────────────┘    └─────────────────┘
@@ -40,32 +40,30 @@ Build WebRTC Android libraries automatically in the cloud using GitHub Actions, 
 
 ### Build Process Flow
 ```
-1. 🔄 Trigger from Any Mac (Manual/Tag/Schedule)
+1. 🔄 Trigger from Any Device (Manual/Tag/Schedule)
 2. 🖥️  Setup Ubuntu 22.04 Cloud Environment  
 3. 🛠️  Install depot_tools & Dependencies
-4. 📥 Fetch WebRTC Source (branch-heads/6845)
-5. ⚙️  Configure Build (16KB pages, architectures)
-6. 🔨 Compile AAR (libwebrtc-m130-patched-X.aar)
+4. 📥 Fetch WebRTC Source (branch-heads/7151)
+5. ⚙️  Configure Build (architectures, debug/release)
+6. 🔨 Compile AAR (libwebrtc-m137-X.aar)
 7. ✅ Verify & Package
-8. 📤 Upload Artifacts (Download from Any Mac)
+8. 📤 Upload Artifacts (Download from Any Device)
 9. 💬 Send Slack Notifications
 ```
 
-### 🍎 **Universal Mac Compatibility**
+### 🌐 **Universal Platform Compatibility**
 
-**Supported Mac Architectures**:
-| Mac Model | Compatibility | Performance | Recommended |
-|-----------|--------------|-------------|-------------|
-| **M4 Mac** (2024) | ✅ Perfect | ⭐⭐⭐⭐⭐ | **Best Experience** |
-| **M3 Mac** (2023) | ✅ Perfect | ⭐⭐⭐⭐⭐ | Excellent |
-| **M2 Mac** (2022) | ✅ Perfect | ⭐⭐⭐⭐ | Very Good |
-| **M1 Mac** (2020) | ✅ Perfect | ⭐⭐⭐⭐ | Very Good |
-| **Intel Mac** | ✅ Perfect | ⭐⭐⭐ | Good |
+**Supported Platforms**:
+| Platform | Compatibility | Performance | Notes |
+|----------|--------------|-------------|-------|
+| **Windows** | ✅ Perfect | ⭐⭐⭐⭐⭐ | All versions supported |
+| **macOS** | ✅ Perfect | ⭐⭐⭐⭐⭐ | M1/M2/M3/M4 & Intel |
+| **Linux** | ✅ Perfect | ⭐⭐⭐⭐⭐ | All distributions |
 
-**Why It Works on All Macs**:
+**Why It Works on All Platforms**:
 - **Cloud-Based Build**: All compilation happens on GitHub's Ubuntu runners
-- **Local Independence**: Your Mac only triggers the build and downloads results
-- **No Architecture Conflicts**: Eliminates ARM vs x86 compatibility issues
+- **Local Independence**: Your device only triggers the build and downloads results
+- **No Architecture Conflicts**: Eliminates local build environment issues
 - **Resource Efficient**: No local memory, disk, or CPU requirements
 
 ## 🚀 Quick Start (5 minutes)
@@ -82,24 +80,24 @@ git push -u origin main
 ```
 
 ### Step 2: Slack Integration (Optional)
-1. Create Slack Webhook URL
-2. Add to GitHub Secrets as `SLACK_WEBHOOK_URL`
-3. Change channel name in workflow file (currently `#빌드`)
+1. Create Slack App and Incoming Webhook in your workspace
+2. Copy webhook URL and add to GitHub Repository Settings → Secrets → `SLACK_WEBHOOK_URL`
+3. Configure channel name in workflow inputs (default: `#빌드`)
 
 ### Step 3: Run Build
 1. GitHub Repository → **Actions** tab
 2. Select **Build WebRTC Android AAR**
 3. Click **Run workflow**
 4. Configure build options:
-   - **WebRTC Branch**: `branch-heads/6845` (M130, recommended)
+   - **WebRTC Branch**: `branch-heads/7151` (M137, latest)
    - **Target Architectures**: `armeabi-v7a,arm64-v8a`
    - **Build Configuration**: `release`
-   - **16KB Page Support**: `true` ✅
+   - **16KB Page Support**: `true` (handled by WebRTC build system)
 5. Click **Run workflow** button
 
 ### Step 4: Download AAR
 - After build completion, check **Artifacts** section
-- Download `libwebrtc-m130-patched-X.aar` file
+- Download `libwebrtc-m137-X.aar` file
 - Copy to your Android project's `app/libs/` folder
 
 ## 📱 Android Project Integration
@@ -107,24 +105,24 @@ git push -u origin main
 ### Gradle Configuration (`app/build.gradle`)
 ```gradle
 android {
-    compileSdk 34
+    compileSdk 35
     
     defaultConfig {
         applicationId "com.yourapp.example"
-        minSdk 24        // Required for 16KB page size support
-        targetSdk 34
+        minSdk 24        // Modern Android support
+        targetSdk 35
         versionCode 1
         versionName "1.0"
     }
     
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
 dependencies {
-    implementation files('libs/libwebrtc-m130-patched-5.aar')
+    implementation files('libs/libwebrtc-m137-X.aar')  // X = GitHub run number
     
     // Additional dependencies (if needed)
     implementation 'androidx.appcompat:appcompat:1.6.1'
@@ -149,25 +147,27 @@ dependencies {
 ```
 
 ### Basic Usage
-```java
-import org.webrtc.*;
+```kotlin
+import org.webrtc.*
+import android.content.Context
+import android.util.Log
 
-public class WebRTCManager {
-    private PeerConnectionFactory peerConnectionFactory;
+class WebRTCManager {
+    private lateinit var peerConnectionFactory: PeerConnectionFactory
     
-    public void initialize(Context context) {
+    fun initialize(context: Context) {
         // WebRTC initialization
         PeerConnectionFactory.initialize(
             PeerConnectionFactory.InitializationOptions.builder(context)
                 .setEnableInternalTracer(true)
                 .createInitializationOptions()
-        );
+        )
         
         // Create PeerConnectionFactory
         peerConnectionFactory = PeerConnectionFactory.builder()
-            .createPeerConnectionFactory();
+            .createPeerConnectionFactory()
             
-        Log.d("WebRTC", "✅ WebRTC initialized successfully!");
+        Log.d("WebRTC", "✅ WebRTC initialized successfully!")
     }
 }
 ```
@@ -175,12 +175,10 @@ public class WebRTCManager {
 ## ⚙️ Build Configuration Options
 
 ### WebRTC Branch Selection
-| Branch | Version | Stability | Recommended Use |
-|--------|---------|-----------|-----------------|
-| `branch-heads/6845` | M130 | ⭐⭐⭐⭐⭐ | **Production (Latest)** |
-| `branch-heads/6478` | M126 | ⭐⭐⭐⭐⭐ | Production (Stable) |
-| `branch-heads/6312` | M125 | ⭐⭐⭐⭐ | Legacy Support |
-| `main` | Latest | ⭐⭐⭐ | Experimental |
+| Branch | Version | Recommended Use |
+|--------|---------|-----------------|
+| `branch-heads/7151` | M137 | **Production (Latest)** |
+| `main` | Latest | Experimental |
 
 ### Target Architecture Options
 ```yaml
@@ -196,12 +194,14 @@ target_arch: "armeabi-v7a,arm64-v8a,x86,x86_64"
 
 ## 📊 Performance Comparison
 
-| Build Environment | Build Time | Memory Usage | Disk Space | Cost | Mac Compatibility |
-|-------------------|------------|-------------|------------|------|------------------|
-| **GitHub Actions** | 2.5 hours | 8GB | Unlimited | Free | **All Macs** ✅ |
-| Local Mac Build | 4-8 hours | 16GB+ | 100GB+ | Power | M1-M4: Issues ❌ |
-| Jenkins (AWS) | 1.5 hours | 16GB | 100GB+ | $50/month | All Macs ✅ |
-| Local Intel Mac | 6-10 hours | 16GB+ | 100GB+ | Power | Intel Only ⚠️ |
+| Build Environment | Build Time | CPU/Memory | Disk Space | Cost | Platform Compatibility |
+|-------------------|------------|------------|------------|------|----------------------|
+| **GitHub Actions** | 2.5 hours | 4 vCPU/16GB | 14GB SSD | Free* | **All Platforms** ✅ |
+| Local Build | 4-8 hours | Varies | 100GB+ | Power | Platform Issues ❌ |
+| Jenkins (AWS) | 1.5 hours | Custom | Custom | $30-120/month | All Platforms ✅ |
+| Docker Local | 6-10 hours | Varies | 100GB+ | Power | Docker Required ⚠️ |
+
+*Free for public repositories. Private repositories: 2,000 minutes/month (Free), 3,000 minutes/month (Pro/Team)
 
 ## 🔄 Automated Build Options
 
@@ -226,12 +226,11 @@ git push origin v1.0.0
 🎉 WebRTC Android AAR Build Success!
 
 📋 Build Information:
-• Branch: branch-heads/6845
+• Branch: branch-heads/7151
 • Architectures: armeabi-v7a,arm64-v8a
 • Configuration: release
-• 16KB Pages: true
 
-📦 AAR File: libwebrtc-m130-patched-5.aar
+📦 AAR File: libwebrtc-m137-X.aar
 
 🔗 [Download Artifacts](link)
 ```
@@ -241,7 +240,7 @@ git push origin v1.0.0
 ❌ WebRTC Android AAR Build Failed!
 
 📋 Build Information:
-• Branch: branch-heads/6845
+• Branch: branch-heads/7151
 • Configuration: release
 
 🔍 [Check Build Log](link)
@@ -257,7 +256,7 @@ git push origin v1.0.0
    - Network timeout
    - depot_tools initialization issues
 
-**Note**: Build failures are independent of your Mac model - they occur in the cloud environment, not locally.
+**Note**: Build failures are independent of your local platform - they occur in the cloud environment, not locally.
 
 ### Architecture Errors
 ```yaml
@@ -268,10 +267,14 @@ target_arch: "armv7,arm64"
 target_arch: "armeabi-v7a,arm64-v8a"
 ```
 
-### Slack Integration Issues
-- Verify `SLACK_WEBHOOK_URL` secret is set
-- Ensure channel exists in Slack workspace
-- Check channel name format: `#빌드` or `#webrtc-builds`
+### Slack Integration Setup
+1. **Create Slack App**: Go to https://api.slack.com/apps and create new app
+2. **Enable Incoming Webhooks**: Activate in Features → Incoming Webhooks
+3. **Add Webhook to Workspace**: Choose target channel and copy webhook URL
+4. **Set GitHub Secret**: Repository Settings → Secrets and variables → Actions → New repository secret
+   - Name: `SLACK_WEBHOOK_URL`
+   - Value: Your webhook URL
+5. **Configure Notifications**: Enable in workflow inputs with your channel name
 
 ## 📁 Project Structure
 
@@ -295,25 +298,14 @@ webrtc-android-builder/
 
 ## 📈 Version History
 
-### v2.0.0 (Current - M130)
-- ✅ Universal Mac support (M1/M2/M3/M4/Intel)
-- ✅ M130 (branch-heads/6845) support
-- ✅ Enhanced security with PQC preparation
+### v1.0.0 (Current - M137)
+- ✅ Universal platform support (Windows/macOS/Linux)
+- ✅ M137 (branch-heads/7151) support
+- ✅ Enhanced security with latest patches
 - ✅ Slack build notifications
-- ✅ Improved artifact naming
-- ✅ Better error handling
-
-### v1.0.0 (M126)
-- ✅ M126 (branch-heads/6478) support
-- ✅ 16KB page size support
+- ✅ Modern Android compatibility
 - ✅ Automatic release system
 - ✅ Detailed build information
-
-### Future Plans
-- 🔄 iOS build support
-- 📊 Build cache optimization
-- 🔧 Custom patch support
-- 🌐 Multi-language documentation
 
 ## 🤝 Contributing
 
@@ -328,10 +320,10 @@ webrtc-android-builder/
 
 ## 🔒 Security & Compliance
 
-- **Post-Quantum Cryptography**: M130 includes PQC preparation
 - **Security Patches**: Latest CVE fixes included
-- **16KB Page Size**: Full Android 15+ compatibility
+- **Modern Android**: Full Android compatibility
 - **Secure Build**: All builds from official WebRTC source
+- **H265/HEVC Support**: Advanced video codec features
 
 ## 📄 License
 
@@ -339,13 +331,13 @@ This project is licensed under MIT License. WebRTC itself is under BSD License.
 
 ## ⭐ Star this repository!
 
-If this project helped solve your Mac WebRTC build issues (M1, M2, M3, M4, or Intel), please give it a ⭐!
+If this project helped solve your WebRTC build issues on any platform, please give it a ⭐!
 
 ---
 
-**🍎 Built for Mac users across all architectures - from M1 pioneers to M4 early adopters.**
+**🌐 Built for developers across all platforms - Windows, macOS, and Linux.**
 
-**Universal solution for WebRTC development challenges on macOS.** 
+**Universal solution for WebRTC development challenges.** 
 
 **Need help or have questions? Open an issue!** 💬
 
