@@ -80,7 +80,6 @@ To use this action in your workflow, add the following step to your `.github/wor
 - name: Build WebRTC Android AAR
   uses: bentleypark/webrtc-android-builder@v1 # Replace with your username/repo and desired tag/branch
   with:
-    webrtc_branch: 'branch-heads/7151' # Default: M137
     target_arch: 'armeabi-v7a,arm64-v8a' # Default: arm64-v8a,armeabi-v7a
     build_config: 'release' # Default: release
     # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }} # Optional: Uncomment for Slack notifications
