@@ -8,9 +8,9 @@ branding:
 
 inputs:
   webrtc_branch:
-    description: 'WebRTC branch to build (e.g., branch-heads/7151, branch-heads/7103)'
+    description: 'WebRTC branch to build (e.g., branch-heads/7258, branch-heads/7339)'
     required: false
-    default: 'branch-heads/7151'
+    default: 'branch-heads/7258'
     type: string
   
   target_arch:

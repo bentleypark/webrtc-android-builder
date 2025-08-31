@@ -10,7 +10,7 @@ compatibility issues across all platforms.
 - 🌐 **Universal Platform Support** - Works on all operating systems (Windows, macOS, Linux)
 - ☁️ **Zero Local Resources** - No local build environment required
 - ⚡ **Fast Cloud Build** - 1.5 hours vs local 4-8 hours
-- 🎯 **Latest WebRTC** - M140 (branch-heads/7339) support with automatic version detection
+- 🎯 **Stable WebRTC** - M139 (branch-heads/7258) current stable with automatic version detection
 - 📱 **Android Compatibility** - Latest WebRTC features
 - 🔄 **Full Automation** - Push, tag, and scheduled builds
 - 📦 **Ready to Use** - Direct AAR file download
@@ -80,7 +80,7 @@ To use this action in your workflow, add the following step to your `.github/wor
 - name: Build WebRTC Android AAR
   uses: bentleypark/webrtc-android-builder@v1 # Replace with your username/repo and desired tag/branch
   with:
-    webrtc_branch: 'branch-heads/7339' # Default: M140, Latest options: branch-heads/7339 (M140), branch-heads/7258 (M139), branch-heads/7204 (M138)
+    webrtc_branch: 'branch-heads/7258' # Default: M139 (Current Stable), Options: branch-heads/7339 (M140 Beta), branch-heads/7258 (M139 Stable), branch-heads/7204 (M138 Stable)
     target_arch: 'armeabi-v7a,arm64-v8a' # Default: arm64-v8a,armeabi-v7a
     build_config: 'release' # Default: release
     # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }} # Optional: Uncomment for Slack notifications
@@ -100,7 +100,7 @@ To use this action in your workflow, add the following step to your `.github/wor
 2. Select **Build WebRTC Android AAR**
 3. Click **Run workflow**
 4. Configure build options:
-    - **WebRTC Branch**: `branch-heads/7339` (M140, latest)
+    - **WebRTC Branch**: `branch-heads/7258` (M139, stable)
     - **Target Architectures**: `armeabi-v7a,arm64-v8a`
     - **Build Configuration**: `release`
 5. Click **Run workflow** button
@@ -192,7 +192,7 @@ This action has the following inputs:
 
 | Input                        | Description                                                                               | Default                 | Required |
 |------------------------------|-------------------------------------------------------------------------------------------|-------------------------|:--------:|
-| `webrtc_branch`              | The WebRTC branch to build. Supports branch-heads/XXXX format. Automatically detects milestone version. | `branch-heads/7339`     | `false`  |
+| `webrtc_branch`              | The WebRTC branch to build. Supports branch-heads/XXXX format. Automatically detects milestone version. | `branch-heads/7258`     | `false`  |
 | `target_arch`                | A comma-separated list of target architectures.                                           | `armeabi-v7a,arm64-v8a` | `false`  |
 | `build_config`               | The build configuration, either `release` or `debug`.                                     | `release`               | `false`  |
 | `slack_webhook_url`          | The Slack webhook URL for sending build notifications. Must be stored as a GitHub secret. | `N/A`                   | `false`  |
@@ -239,19 +239,24 @@ jobs:
 
 The action automatically detects the WebRTC milestone version from the branch name and generates dynamic AAR filenames.
 
-| Branch              | Version | Recommended Use         | AAR Filename Pattern |
-|---------------------|---------|-------------------------|----------------------|
-| `branch-heads/7339` | M140    | **Production (Latest)** | `libwebrtc-140.7339.X.aar` |
-| `branch-heads/7258` | M139    | Production (Stable)     | `libwebrtc-139.7258.X.aar` |
-| `branch-heads/7204` | M138    | Production (Stable)     | `libwebrtc-138.7204.X.aar` |
-| `branch-heads/7151` | M137    | Production (Stable)     | `libwebrtc-137.7151.X.aar` |
-| `branch-heads/7103` | M136    | Production (Legacy)     | `libwebrtc-136.7103.X.aar` |
+| Branch              | Version | Release Status         | AAR Filename Pattern |
+|---------------------|---------|------------------------|----------------------|
+| `branch-heads/7339` | M140    | **Beta** (Next Stable) | `libwebrtc-140.7339.X.aar` |
+| `branch-heads/7258` | M139    | **Stable** (Current)   | `libwebrtc-139.7258.X.aar` |
+| `branch-heads/7204` | M138    | **Stable** (Previous)  | `libwebrtc-138.7204.X.aar` |
+| `branch-heads/7151` | M137    | **Stable** (LTS)       | `libwebrtc-137.7151.X.aar` |
+| `branch-heads/7103` | M136    | Legacy                 | `libwebrtc-136.7103.X.aar` |
 
 **Dynamic Version Detection**: The action uses Chromium's Gitiles API to fetch exact version information from each branch's VERSION file, ensuring accurate AAR filenames. `X` represents the current patch number which updates automatically with each branch commit.
 
 ### 📊 WebRTC Milestone Reference
 
 Need to find the right branch for your target milestone? Check [Chromium Dash](https://chromiumdash.appspot.com/branches) for official branch-to-milestone mappings.
+
+**Release Status Verification**: The above status is verified using Chrome for Testing API:
+- **Stable**: `139.0.7258.154` (M139)
+- **Beta**: `140.0.7339.41` (M140) 
+- **Dev**: `141.0.7378.3` (M141)
 
 **Note**: The patch number (`X`) in AAR filenames is dynamic and automatically detected from the branch's current VERSION file. This ensures you always get the latest patches and security fixes for each milestone.
 
