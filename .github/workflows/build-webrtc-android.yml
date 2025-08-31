@@ -1,0 +1,384 @@
+name: Build WebRTC Android AAR
+
+on:
+  workflow_dispatch:
+    inputs:
+      webrtc_branch:
+        description: 'WebRTC branch to build (e.g., branch-heads/6845, branch-heads/6478)'
+        required: true
+        default: 'branch-heads/6845'
+        type: string
+      target_arch:
+        description: 'Target architectures (comma separated)'
+        required: true
+        default: 'armeabi-v7a,arm64-v8a'
+        type: string
+      build_config:
+        description: 'Build configuration'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+        - release
+        - debug
+      enable_16kb_pages:
+        description: 'Enable 16KB page size support'
+        required: false
+        default: true
+        type: boolean
+      enable_slack_notifications:
+        description: 'Enable Slack notifications'
+        required: false
+        default: false
+        type: boolean
+      slack_webhook_url:
+        description: 'Slack webhook URL for notifications (optional)'
+        required: false
+        type: string
+      slack_channel:
+        description: 'Slack channel for notifications'
+        required: false
+        default: '#빌드'
+        type: string
+  
+  push:
+    tags:
+      - 'v*'
+  
+#  schedule:
+#    # 매주 일요일 UTC 02:00 (한국시간 11:00)에 자동 빌드
+#    - cron: '0 2 * * 0'
+
+env:
+  DEPOT_TOOLS_UPDATE: 0
+
+jobs:
+  build-webrtc-android:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 480  # 8시간 타임아웃
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Free up disk space
+      run: |
+        # GitHub Actions 기본 용량 확보
+        echo "Initial disk space:"
+        df -h
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo rm -rf /usr/local/lib/android  # 안드로이드 SDK 제거
+        sudo docker image prune -a -f      # 사용하지 않는 도커 이미지 제거
+        echo "Disk space after cleanup:"
+        df -h
+        
+    - name: Set up build environment
+      run: |
+        # 시스템 업데이트 및 기본 도구 설치
+        sudo apt-get update
+        sudo apt-get install -y \
+          git \
+          python3 \
+          python3-pip \
+          curl \
+          lsb-release \
+          sudo \
+          xz-utils \
+          build-essential
+    
+    - name: Setup depot_tools
+      run: |
+        # depot_tools 클론 및 설정
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        
+        # PATH에 depot_tools 추가
+        export PATH="${PWD}/depot_tools:$PATH"
+        echo "${PWD}/depot_tools" >> $GITHUB_PATH
+        
+        # depot_tools 초기화 - 강제 부트스트랩
+        echo "Initializing depot_tools..."
+        cd depot_tools
+        ./ensure_bootstrap
+        cd ..
+        
+        # gclient 실행으로 추가 초기화
+        gclient --version
+        
+        # 환경 변수 설정
+        echo "GYP_DEFINES=OS=android" >> $GITHUB_ENV
+        echo "DEPOT_TOOLS_UPDATE=0" >> $GITHUB_ENV
+        
+    - name: Configure Git
+      run: |
+        git config --global user.name "WebRTC Builder"
+        git config --global user.email "builder@webrtc.local"
+        git config --global core.autocrlf false
+        git config --global core.filemode false
+        git config --global color.ui false
+        
+    - name: Create build workspace
+      run: |
+        mkdir -p webrtc-build
+        cd webrtc-build
+        
+        # WebRTC Android 소스 가져오기
+        fetch --nohooks webrtc_android
+        
+    - name: Checkout WebRTC branch
+      run: |
+        cd webrtc-build/src
+        
+        # 지정된 브랜치로 체크아웃
+        echo "Checking out WebRTC branch: ${{ inputs.webrtc_branch || 'branch-heads/6478' }}"
+        git checkout ${{ inputs.webrtc_branch || 'branch-heads/6478' }}
+        gclient sync
+        
+    - name: Install build dependencies
+      run: |
+        cd webrtc-build/src
+        
+        # Linux 빌드 의존성 설치 (Android 포함)
+        sudo ./build/install-build-deps.sh --no-prompt --no-chromeos-fonts
+        
+    - name: Apply 16KB page size patches (if enabled)
+      if: ${{ inputs.enable_16kb_pages == true }}
+      run: |
+        cd webrtc-build/src
+        
+        # 16KB 페이지 크기 지원을 위한 설정
+        echo "Applying 16KB page size optimizations..."
+        
+        # Android minSdkVersion을 24로 설정 (16KB 페이지 크기 지원)
+        find . -name "*.gni" -o -name "*.gn" | xargs grep -l "min_sdk_version.*=.*23" | \
+        xargs sed -i 's/min_sdk_version.*=.*23/min_sdk_version = 24/g' || true
+        
+    - name: Configure build
+      run: |
+        cd webrtc-build/src
+        
+        # 빌드 구성 설정
+        BUILD_ARGS='
+          target_os="android"
+          is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}
+          is_component_build=false
+          is_clang=true
+          rtc_include_tests=false
+          rtc_build_examples=false
+          rtc_use_h264=true
+          rtc_enable_protobuf=true
+          use_custom_libcxx=false
+          treat_warnings_as_errors=false
+          use_rtti=true
+        '
+        
+        if [ "${{ inputs.enable_16kb_pages }}" = "true" ]; then
+          BUILD_ARGS="$BUILD_ARGS
+          android_64bit_target_cpu=true"
+        fi
+        
+        mkdir -p out/android
+        gn gen out/android --args="$BUILD_ARGS"
+        
+    - name: Build WebRTC AAR
+      run: |
+        cd webrtc-build/src
+        
+        # 아키텍처 파라미터 처리
+        IFS=',' read -ra ARCH_ARRAY <<< "${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}"
+        ARCH_ARGS=""
+        for arch in "${ARCH_ARRAY[@]}"; do
+          # 공백 제거
+          arch=$(echo "$arch" | xargs)
+          ARCH_ARGS="$ARCH_ARGS --arch $arch"
+        done
+        
+        echo "Building WebRTC AAR with architectures: $ARCH_ARGS"
+        echo "Build configuration: ${{ inputs.build_config || 'release' }}"
+        
+        # AAR 파일명 생성 (M130, patched 형식)
+        AAR_FILENAME="libwebrtc-m130-patched-${{ github.run_number }}.aar"
+        echo "AAR filename: $AAR_FILENAME"
+        
+        # AAR 빌드 실행
+        python3 tools_webrtc/android/build_aar.py $ARCH_ARGS \
+          --build-dir out/android \
+          --output "$AAR_FILENAME" \
+          --extra-gn-args "is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}"
+          
+    - name: Verify build output
+      run: |
+        cd webrtc-build/src
+        
+        AAR_FILENAME="libwebrtc-m130-patched-${{ github.run_number }}.aar"
+        
+        if [ ! -f "$AAR_FILENAME" ]; then
+          echo "❌ AAR file not found: $AAR_FILENAME"
+          exit 1
+        fi
+        
+        FILE_SIZE=$(stat -c%s "$AAR_FILENAME")
+        FILE_SIZE_MB=$((FILE_SIZE / 1024 / 1024))
+        
+        echo "✅ AAR file successfully built!"
+        echo "📦 File name: $AAR_FILENAME"
+        echo "📦 File size: ${FILE_SIZE_MB}MB"
+        
+        # AAR 내용 확인
+        echo "📋 AAR contents:"
+        unzip -l "$AAR_FILENAME" | head -20
+        
+    - name: Create build info
+      run: |
+        cd webrtc-build/src
+        
+        AAR_FILENAME="libwebrtc-m130-patched-${{ github.run_number }}.aar"
+        COMMIT_HASH=$(git rev-parse HEAD)
+        COMMIT_DATE=$(git log -1 --format="%ci")
+        BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+        
+        cat > build-info.txt << EOF
+        🚀 WebRTC Android AAR Build Information
+        =============================================
+        
+        📅 Build Date: $(date -u)
+        🌿 WebRTC Branch: $BRANCH_NAME (${{ inputs.webrtc_branch || 'branch-heads/6478' }})
+        📝 Commit Hash: $COMMIT_HASH
+        🕒 Commit Date: $COMMIT_DATE
+        🏗️  Target Architectures: ${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}
+        ⚙️  Build Configuration: ${{ inputs.build_config || 'release' }}
+        📏 16KB Page Support: ${{ inputs.enable_16kb_pages || 'true' }}
+        🖥️  Build Environment: $(uname -a)
+        🐍 Python Version: $(python3 --version)
+        🔧 Builder: GitHub Actions
+        
+        📦 AAR File Information:
+        - File Name: $AAR_FILENAME
+        - File Size: $(stat -c%s "$AAR_FILENAME") bytes ($(stat -c%s "$AAR_FILENAME" | awk '{print int($1/1024/1024)"MB"}'))
+        - MD5 Hash: $(md5sum "$AAR_FILENAME" | cut -d' ' -f1)
+        
+        🔗 Repository: ${{ github.repository }}
+        🏷️  Run ID: ${{ github.run_id }}
+        EOF
+        
+        echo "ℹ️ Build info created:"
+        cat build-info.txt
+        
+    - name: Upload AAR artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: webrtc-android-aar-${{ github.run_number }}
+        path: |
+          webrtc-build/src/libwebrtc-m130-patched-${{ github.run_number }}.aar
+          webrtc-build/src/build-info.txt
+        retention-days: 90
+        compression-level: 6
+        
+    - name: Send Slack notification (Success)
+      if: ${{ success() && inputs.enable_slack_notifications == true }}
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        channel: ${{ inputs.slack_channel || '#빌드' }}
+        text: |
+          🎉 *WebRTC Android AAR 빌드 성공!*
+          
+          📋 *빌드 정보:*
+          • Branch: `${{ inputs.webrtc_branch || 'branch-heads/6845' }}`
+          • Architectures: `${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}`
+          • Configuration: `${{ inputs.build_config || 'release' }}`
+          • 16KB Pages: `${{ inputs.enable_16kb_pages || 'true' }}`
+          
+          📦 *AAR 파일:* `libwebrtc-m130-patched-${{ github.run_number }}.aar`
+          
+          🔗 [Artifacts 다운로드](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          ⏱️ 빌드 완료: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          🕒 한국시간: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S KST')
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url || secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: Send Slack notification (Failure)
+      if: ${{ failure() && inputs.enable_slack_notifications == true }}
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        channel: ${{ inputs.slack_channel || '#빌드' }}
+        text: |
+          ❌ *WebRTC Android AAR 빌드 실패!*
+          
+          📋 *빌드 정보:*
+          • Branch: `${{ inputs.webrtc_branch || 'branch-heads/6845' }}`
+          • Configuration: `${{ inputs.build_config || 'release' }}`
+          
+          🔍 [빌드 로그 확인](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          ⚠️ 실패 시간: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          🕒 한국시간: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S KST')
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url || secrets.SLACK_WEBHOOK_URL }}
+        
+    # - name: Create Release (on tag push)
+    #   if: startsWith(github.ref, 'refs/tags/')
+    #   uses: softprops/action-gh-release@v1
+    #   with:
+    #     files: |
+    #       webrtc-build/src/libwebrtc-m130-patched-${{ github.run_number }}.aar
+    #       webrtc-build/src/build-info.txt
+    #     body: |
+    #       # 🚀 WebRTC Android AAR Release
+    #       
+    #       ## 📋 Build Information
+    #       - **WebRTC Branch**: ${{ inputs.webrtc_branch || 'branch-heads/6845' }}
+    #       - **Target Architectures**: ${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}
+    #       - **Build Configuration**: ${{ inputs.build_config || 'release' }}
+    #       - **16KB Page Support**: ${{ inputs.enable_16kb_pages || 'true' }}
+    #       - **Build Date**: ${{ github.run_id }}
+    #       
+    #       ## 📱 Android Integration
+    #       
+    #       ### Gradle Setup
+    #       ```gradle
+    #       android {
+    #           compileSdk 34
+    #           defaultConfig {
+    #               minSdk 24  // Required for 16KB page size support
+    #               targetSdk 34
+    #           }
+    #       }
+    #       
+    #       dependencies {
+    #           implementation files('libs/libwebrtc-m130-patched-5.aar')
+    #       }
+    #       ```
+    #       
+    #       ### ProGuard Rules
+    #       ```proguard
+    #       -keep class org.webrtc.** { *; }
+    #       -dontwarn org.webrtc.**
+    #       ```
+    #       
+    #       ## 🔧 Usage
+    #       1. Download `libwebrtc-m130-patched-5.aar` 
+    #       2. Place in your Android project's `app/libs/` directory
+    #       3. Add to your `build.gradle` dependencies
+    #       4. Rebuild your project
+    #       
+    #       ---
+    #       
+    #       **⚡ Built with GitHub Actions** | **🍎 M1 Mac Compatible** | **📱 Android Ready**
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Build summary
+      run: |
+        echo "## 🎉 WebRTC Android AAR Build Completed!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Build Details" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: ${{ inputs.webrtc_branch || 'branch-heads/6478' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Architectures**: ${{ inputs.target_arch || 'armeabi-v7a,arm64-v8a' }}" >> $GITHUB_STEP_SUMMARY  
+        echo "- **Configuration**: ${{ inputs.build_config || 'release' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **16KB Pages**: ${{ inputs.enable_16kb_pages || 'true' }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Download" >> $GITHUB_STEP_SUMMARY
+        echo "Check the **Artifacts** section above to download your AAR file!" >> $GITHUB_STEP_SUMMARY

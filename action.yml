@@ -1,0 +1,213 @@
+name: 'WebRTC Android Builder'
+description: 'Build WebRTC Android AAR automatically in the cloud for all Mac architectures (M1/M2/M3/M4/Intel)'
+author: 'WebRTC Builder Contributors'
+
+branding:
+  icon: 'smartphone'
+  color: 'blue'
+
+inputs:
+  webrtc_branch:
+    description: 'WebRTC branch to build (e.g., branch-heads/6845, main)'
+    required: false
+    default: 'branch-heads/6845'
+  
+  target_arch:
+    description: 'Target architectures (comma separated)'
+    required: false
+    default: 'armeabi-v7a,arm64-v8a'
+  
+  build_config:
+    description: 'Build configuration (release or debug)'
+    required: false
+    default: 'release'
+  
+  enable_16kb_pages:
+    description: 'Enable 16KB page size support'
+    required: false
+    default: 'true'
+  
+  slack_webhook_url:
+    description: 'Slack webhook URL for notifications (optional)'
+    required: false
+  
+  slack_channel:
+    description: 'Slack channel for notifications'
+    required: false
+    default: '#빌드'
+  
+  enable_slack_notifications:
+    description: 'Enable Slack notifications'
+    required: false
+    default: 'false'
+
+outputs:
+  aar_filename:
+    description: 'Generated AAR filename'
+    value: ${{ steps.build.outputs.aar_filename }}
+  
+  download_url:
+    description: 'Download URL for artifacts'
+    value: ${{ steps.build.outputs.download_url }}
+  
+  build_info:
+    description: 'Build information summary'
+    value: ${{ steps.build.outputs.build_info }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup build environment
+      shell: bash
+      run: |
+        echo "🚀 Starting WebRTC Android AAR build..."
+        echo "Branch: ${{ inputs.webrtc_branch }}"
+        echo "Architectures: ${{ inputs.target_arch }}"
+        echo "Configuration: ${{ inputs.build_config }}"
+        
+    - name: Free up disk space
+      shell: bash
+      run: |
+        echo "Initial disk space:"
+        df -h
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo rm -rf /usr/local/lib/android
+        sudo docker image prune -a -f
+        echo "Disk space after cleanup:"
+        df -h
+        
+    - name: Set up build dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          git \
+          python3 \
+          python3-pip \
+          curl \
+          lsb-release \
+          sudo \
+          xz-utils \
+          build-essential
+    
+    - name: Setup depot_tools
+      shell: bash
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        export PATH="${PWD}/depot_tools:$PATH"
+        echo "${PWD}/depot_tools" >> $GITHUB_PATH
+        
+        echo "Initializing depot_tools..."
+        cd depot_tools
+        ./ensure_bootstrap
+        cd ..
+        
+        gclient --version
+        echo "GYP_DEFINES=OS=android" >> $GITHUB_ENV
+        echo "DEPOT_TOOLS_UPDATE=0" >> $GITHUB_ENV
+        
+    - name: Configure Git
+      shell: bash
+      run: |
+        git config --global user.name "WebRTC Builder"
+        git config --global user.email "builder@webrtc.local"
+        git config --global core.autocrlf false
+        git config --global core.filemode false
+        git config --global color.ui false
+        
+    - name: Create build workspace
+      shell: bash
+      run: |
+        mkdir -p webrtc-build
+        cd webrtc-build
+        fetch --nohooks webrtc_android
+        
+    - name: Checkout WebRTC branch
+      shell: bash
+      run: |
+        cd webrtc-build/src
+        echo "Checking out WebRTC branch: ${{ inputs.webrtc_branch }}"
+        git checkout ${{ inputs.webrtc_branch }}
+        gclient sync
+        
+    - name: Install build dependencies
+      shell: bash
+      run: |
+        cd webrtc-build/src
+        sudo ./build/install-build-deps.sh --no-prompt --no-chromeos-fonts
+        
+    - name: Apply 16KB page size patches
+      if: ${{ inputs.enable_16kb_pages == 'true' }}
+      shell: bash
+      run: |
+        cd webrtc-build/src
+        echo "Applying 16KB page size optimizations..."
+        find . -name "*.gni" -o -name "*.gn" | xargs grep -l "min_sdk_version.*=.*23" | \
+        xargs sed -i 's/min_sdk_version.*=.*23/min_sdk_version = 24/g' || true
+        
+    - name: Configure build
+      shell: bash
+      run: |
+        cd webrtc-build/src
+        BUILD_ARGS='
+          target_os="android"
+          is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}
+          is_component_build=false
+          is_clang=true
+          rtc_include_tests=false
+          rtc_build_examples=false
+          rtc_use_h264=true
+          rtc_enable_protobuf=true
+          use_custom_libcxx=false
+          treat_warnings_as_errors=false
+          use_rtti=true
+        '
+        
+        if [ "${{ inputs.enable_16kb_pages }}" = "true" ]; then
+          BUILD_ARGS="$BUILD_ARGS
+          android_64bit_target_cpu=true"
+        fi
+        
+        mkdir -p out/android
+        gn gen out/android --args="$BUILD_ARGS"
+        
+    - name: Build WebRTC AAR
+      id: build
+      shell: bash
+      run: |
+        cd webrtc-build/src
+        
+        IFS=',' read -ra ARCH_ARRAY <<< "${{ inputs.target_arch }}"
+        ARCH_ARGS=""
+        for arch in "${ARCH_ARRAY[@]}"; do
+          arch=$(echo "$arch" | xargs)
+          ARCH_ARGS="$ARCH_ARGS --arch $arch"
+        done
+        
+        AAR_FILENAME="libwebrtc-m130-patched-${{ github.run_number }}.aar"
+        echo "aar_filename=$AAR_FILENAME" >> $GITHUB_OUTPUT
+        
+        echo "Building WebRTC AAR with architectures: $ARCH_ARGS"
+        python3 tools_webrtc/android/build_aar.py $ARCH_ARGS \
+          --build-dir out/android \
+          --output "$AAR_FILENAME" \
+          --extra-gn-args "is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}"
+        
+        echo "download_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
+        echo "build_info=WebRTC M130 AAR built successfully" >> $GITHUB_OUTPUT
+        
+    - name: Send Slack notification
+      if: ${{ inputs.enable_slack_notifications == 'true' && inputs.slack_webhook_url != '' }}
+      shell: bash
+      run: |
+        if [ "${{ job.status }}" = "success" ]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "channel": "${{ inputs.slack_channel }}",
+              "text": "🎉 *WebRTC Android AAR 빌드 성공!*\n\n📋 *빌드 정보:*\n• Branch: `${{ inputs.webrtc_branch }}`\n• Architectures: `${{ inputs.target_arch }}`\n• Configuration: `${{ inputs.build_config }}`\n\n📦 *AAR 파일:* `${{ steps.build.outputs.aar_filename }}`\n\n🔗 [Artifacts 다운로드](${{ steps.build.outputs.download_url }})"
+            }' \
+            ${{ inputs.slack_webhook_url }}
+        fi
