@@ -209,8 +209,8 @@ runs:
           ARCH_ARGS="$ARCH_ARGS --arch $arch"
         done
         
-        # Generate AAR filename with detected version info
-        AAR_FILENAME="libwebrtc-${WEBRTC_FULL_VERSION}.aar"
+        # Generate AAR filename with detected version info (Mac-compatible format)
+        AAR_FILENAME="libwebrtc-M${WEBRTC_MILESTONE}-${WEBRTC_BUILD}-patched-${WEBRTC_PATCH}.aar"
         echo "aar_filename=$AAR_FILENAME" >> $GITHUB_OUTPUT
         
         echo "Building WebRTC AAR with architectures: $ARCH_ARGS"
@@ -219,6 +219,18 @@ runs:
           --build-dir out/android \
           --output "$AAR_FILENAME" \
           --extra-gn-args "is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}"
+        
+        # Create build info file
+        cat > build-info.txt << EOF
+        Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        WebRTC Milestone: M$WEBRTC_MILESTONE
+        WebRTC Version: $WEBRTC_FULL_VERSION
+        Branch: ${{ inputs.webrtc_branch }}
+        Build Config: ${{ inputs.build_config }}
+        Target Architectures: ${{ inputs.target_arch }}
+        AAR Filename: $AAR_FILENAME
+        GitHub Run: ${{ github.run_number }}
+        EOF
         
         echo "download_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
         echo "build_info=WebRTC M$WEBRTC_MILESTONE ($WEBRTC_FULL_VERSION) AAR built successfully" >> $GITHUB_OUTPUT

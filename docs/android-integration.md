@@ -5,9 +5,9 @@
 
 This guide demonstrates integration with **dynamically generated WebRTC AAR files** from our GitHub Action. The action automatically detects the milestone version from the selected branch and generates appropriately named AAR files:
 
-- **branch-heads/7151** → `libwebrtc-m137-X.aar` (M137)
-- **branch-heads/7103** → `libwebrtc-m136-X.aar` (M136)
-- **branch-heads/7000+** → `libwebrtc-m135-X.aar` (M135)
+- **branch-heads/7151** → `libwebrtc-M137-7151-patched-X.aar` (M137)
+- **branch-heads/7103** → `libwebrtc-M136-7103-patched-X.aar` (M136)
+- **branch-heads/7000+** → `libwebrtc-M135-7000-patched-X.aar` (M135)
 
 **🔗 Milestone Reference**: Use [Chromium Dash](https://chromiumdash.appspot.com/branches) to find branch numbers for your target WebRTC milestone.
 
@@ -16,7 +16,7 @@ This guide demonstrates integration with **dynamically generated WebRTC AAR file
 MyWebRTCApp/
 ├── app/
 │   ├── libs/
-│   │   └── libwebrtc-mXXX-X.aar          # The built AAR file (dynamic milestone)
+│   │   └── libwebrtc-MXXX-XXXX-patched-X.aar          # The built AAR file (dynamic milestone)
 │   ├── src/main/
 │   │   └── java/.../
 │   │       ├── MainActivity.kt
@@ -92,7 +92,7 @@ android {
 
 dependencies {
     // 🚀 WebRTC AAR file
-    implementation files('libs/libwebrtc-m137-X.aar')  // Example: M137, X = GitHub run number
+    implementation files('libs/libwebrtc-M137-7151-patched-X.aar')  // Example: M137, X = patch number
     
     // Android base libraries
     implementation 'androidx.appcompat:appcompat:1.6.1'

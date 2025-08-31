@@ -48,7 +48,7 @@ compatibility issues across all platforms.
 3. 🛠️  Install depot_tools & Dependencies
 4. 📥  Fetch WebRTC Source (branch-heads/7339 default)
 5. ⚙️  Configure Build (architectures, debug/release)
-6. 🔨  Compile AAR (libwebrtc-140.7339.X.aar)
+6. 🔨  Compile AAR (libwebrtc-M140-7339-patched-X.aar)
 7. ✅  Verify & Package
 8. 📤  Upload Artifacts (Download from Any Device)
 9. 💬  Send Slack Notifications
@@ -108,7 +108,7 @@ To use this action in your workflow, add the following step to your `.github/wor
 ### Step 4: Download AAR
 
 - After build completion, check **Artifacts** section
-- Download AAR file (e.g., `libwebrtc-140.7339.X.aar` for M140)
+- Download AAR file (e.g., `libwebrtc-M140-7339-patched-X.aar` for M140)
 - Copy to your Android project's `app/libs/` folder
 
 ## 📱 Android Project Integration
@@ -134,7 +134,7 @@ android {
 }
 
 dependencies {
-    implementation files('libs/libwebrtc-140.7339.X.aar')  // Example: M140, X = current patch number
+    implementation files('libs/libwebrtc-M140-7339-patched-X.aar')  // Example: M140, X = current patch number
     
     // Additional dependencies (if needed)
     implementation 'androidx.appcompat:appcompat:1.6.1'
@@ -205,7 +205,7 @@ This action produces the following outputs:
 
 | Output         | Description                                                                         |
 |----------------|-------------------------------------------------------------------------------------|
-| `aar_filename` | The filename of the generated AAR package (e.g., `libwebrtc-140.7339.X.aar`). |
+| `aar_filename` | The filename of the generated AAR package (e.g., `libwebrtc-M140-7339-patched-X.aar`). |
 | `download_url` | The URL to the GitHub Actions run where the build artifacts can be downloaded.      |
 | `build_info`   | A summary of the build information.                                                 |
 
@@ -241,11 +241,11 @@ The action automatically detects the WebRTC milestone version from the branch na
 
 | Branch              | Version | Release Status         | AAR Filename Pattern |
 |---------------------|---------|------------------------|----------------------|
-| `branch-heads/7339` | M140    | **Beta** (Next Stable) | `libwebrtc-140.7339.X.aar` |
-| `branch-heads/7258` | M139    | **Stable** (Current)   | `libwebrtc-139.7258.X.aar` |
-| `branch-heads/7204` | M138    | **Stable** (Previous)  | `libwebrtc-138.7204.X.aar` |
-| `branch-heads/7151` | M137    | **Stable** (LTS)       | `libwebrtc-137.7151.X.aar` |
-| `branch-heads/7103` | M136    | Legacy                 | `libwebrtc-136.7103.X.aar` |
+| `branch-heads/7339` | M140    | **Beta** (Next Stable) | `libwebrtc-M140-7339-patched-X.aar` |
+| `branch-heads/7258` | M139    | **Stable** (Current)   | `libwebrtc-M139-7258-patched-X.aar` |
+| `branch-heads/7204` | M138    | **Stable** (Previous)  | `libwebrtc-M138-7204-patched-X.aar` |
+| `branch-heads/7151` | M137    | **Stable** (LTS)       | `libwebrtc-M137-7151-patched-X.aar` |
+| `branch-heads/7103` | M136    | Legacy                 | `libwebrtc-M136-7103-patched-X.aar` |
 
 **Dynamic Version Detection**: The action uses Chromium's Gitiles API to fetch exact version information from each branch's VERSION file, ensuring accurate AAR filenames. `X` represents the current patch number which updates automatically with each branch commit.
 
@@ -297,7 +297,7 @@ target_arch: "armeabi-v7a,arm64-v8a,x86,x86_64"
 • Architectures: armeabi-v7a,arm64-v8a
 • Configuration: release
 
-📦 AAR File: libwebrtc-140.7339.X.aar
+📦 AAR File: libwebrtc-M140-7339-patched-X.aar
 
 🔗 [Download Artifacts](link)
 ```

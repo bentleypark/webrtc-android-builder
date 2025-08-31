@@ -94,6 +94,7 @@ jobs:
           name: test-webrtc-aar-${{ github.run_number }}
           path: |
             webrtc-build/src/*.aar
+            webrtc-build/src/build-info.txt
           retention-days: 7
       
       - name: Test Results Summary
