@@ -54,17 +54,57 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Setup build environment
+    - name: Detect WebRTC milestone from branch (gitiles, fast)
       shell: bash
       run: |
+        set -euo pipefail
+        BRANCH="${{ inputs.webrtc_branch }}"
         echo "🚀 Starting WebRTC Android AAR build..."
-        echo "Branch: ${{ inputs.webrtc_branch }}"
+        echo "Branch: $BRANCH"
         echo "Architectures: ${{ inputs.target_arch }}"
         echo "Configuration: ${{ inputs.build_config }}"
         
-        MILESTONE="${{ inputs.webrtc_milestone }}"
-        echo "Detected milestone: $MILESTONE"
+        echo "Resolving milestone from branch: $BRANCH"
+        URL="https://chromium.googlesource.com/chromium/src/+/refs/${BRANCH}/chrome/VERSION?format=TEXT"
+        
+        if ! VERSION_B64=$(curl -fsSL "$URL" --max-time 15); then
+          echo "⚠️  Failed to fetch chrome/VERSION from gitiles for $BRANCH, falling back to static mapping" >&2
+          
+          # Extract branch number for static fallback
+          BRANCH_NUMBER=$(echo "$BRANCH" | sed 's/.*branch-heads\///')
+          echo "Branch number: $BRANCH_NUMBER"
+          
+          # Static milestone mapping (fallback)
+          if [ "$BRANCH_NUMBER" -ge 7339 ]; then
+            MILESTONE="140"
+          elif [ "$BRANCH_NUMBER" -ge 7258 ]; then
+            MILESTONE="139"
+          elif [ "$BRANCH_NUMBER" -ge 7204 ]; then
+            MILESTONE="138"
+          elif [ "$BRANCH_NUMBER" -ge 7151 ]; then
+            MILESTONE="137"
+          elif [ "$BRANCH_NUMBER" -ge 7103 ]; then
+            MILESTONE="136"
+          elif [ "$BRANCH_NUMBER" -ge 7000 ]; then
+            MILESTONE="135"
+          elif [ "$BRANCH_NUMBER" -ge 6845 ]; then
+            MILESTONE="134"
+          else
+            MILESTONE="133"
+          fi
+          echo "Using static mapping: M$MILESTONE"
+        else
+          # Parse milestone from VERSION file
+          MILESTONE=$(printf "%s" "$VERSION_B64" | base64 -d | awk -F= '/^MAJOR=/{print $2}')
+          if [[ -z "${MILESTONE:-}" ]]; then
+            echo "❌ Could not parse MAJOR from chrome/VERSION" >&2
+            exit 1
+          fi
+          echo "✅ Successfully detected milestone from Gitiles API: M$MILESTONE"
+        fi
+        
         echo "WEBRTC_MILESTONE=$MILESTONE" >> $GITHUB_ENV
+        echo "Final milestone: M$MILESTONE"
 
     - name: Free up disk space
       shell: bash
@@ -174,18 +214,19 @@ runs:
           ARCH_ARGS="$ARCH_ARGS --arch $arch"
         done
         
-        AAR_FILENAME="libwebrtc.aar"
+        # Generate AAR filename with detected milestone
+        AAR_FILENAME="libwebrtc-m${WEBRTC_MILESTONE}-${{ github.run_number }}.aar"
         echo "aar_filename=$AAR_FILENAME" >> $GITHUB_OUTPUT
         
         echo "Building WebRTC AAR with architectures: $ARCH_ARGS"
-        echo "Milestone: $WEBRTC_MILESTONE, Branch: ${{ inputs.webrtc_branch }}"
+        echo "Milestone: M$WEBRTC_MILESTONE, Branch: ${{ inputs.webrtc_branch }}"
         python3 tools_webrtc/android/build_aar.py $ARCH_ARGS \
           --build-dir out/android \
           --output "$AAR_FILENAME" \
           --extra-gn-args "is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}"
         
         echo "download_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
-        echo "build_info=WebRTC $WEBRTC_MILESTONE AAR built successfully" >> $GITHUB_OUTPUT
+        echo "build_info=WebRTC M$WEBRTC_MILESTONE AAR built successfully" >> $GITHUB_OUTPUT
 
     - name: Send Slack notification
       if: ${{ inputs.enable_slack_notifications == 'true' && inputs.slack_webhook_url != '' }}
@@ -195,7 +236,7 @@ runs:
           curl -X POST -H 'Content-type: application/json' \
             --data '{
               "channel": "${{ inputs.slack_channel }}",
-              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Milestone: `'$WEBRTC_MILESTONE'`\n• Branch: `${{ inputs.webrtc_branch }}`\n• Architectures: `${{ inputs.target_arch }}`\n• Configuration: `${{ inputs.build_config }}`\n\n📦 *AAR File:* `${{ steps.build.outputs.aar_filename }}`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
+              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Milestone: \`M$WEBRTC_MILESTONE\`\n• Branch: \`${{ inputs.webrtc_branch }}\`\n• Architectures: \`${{ inputs.target_arch }}\`\n• Configuration: \`${{ inputs.build_config }}\`\n\n📦 *AAR File:* \`${{ steps.build.outputs.aar_filename }}\`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
             }' \
             ${{ inputs.slack_webhook_url }}
         fi
