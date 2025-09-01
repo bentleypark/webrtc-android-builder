@@ -127,7 +127,8 @@ runs:
           lsb-release \
           sudo \
           xz-utils \
-          build-essential
+          build-essential \
+          ccache
 
     - name: Setup depot_tools
       shell: bash
@@ -144,15 +145,39 @@ runs:
         gclient --version
         echo "GYP_DEFINES=OS=android" >> $GITHUB_ENV
         echo "DEPOT_TOOLS_UPDATE=0" >> $GITHUB_ENV
+        
+        # Setup ccache environment
+        echo "CCACHE_DIR=$HOME/.cache/ccache" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=2G" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESS=1" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESSLEVEL=6" >> $GITHUB_ENV
 
-    - name: Configure Git
+    - name: Configure ccache and Git
       shell: bash
       run: |
+        # Configure ccache
+        mkdir -p $HOME/.cache/ccache
+        ccache --zero-stats
+        ccache --show-config
+        echo "Initial ccache stats:"
+        ccache --show-stats
+        
+        # Configure Git
         git config --global user.name "WebRTC Builder"
         git config --global user.email "builder@webrtc.local"
         git config --global core.autocrlf false
         git config --global core.filemode false
         git config --global color.ui false
+    
+    - name: Cache ccache directory
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ccache
+        key: ccache-webrtc-${{ inputs.webrtc_branch }}-${{ inputs.target_arch }}-${{ inputs.build_config }}
+        restore-keys: |
+          ccache-webrtc-${{ inputs.webrtc_branch }}-${{ inputs.target_arch }}-
+          ccache-webrtc-${{ inputs.webrtc_branch }}-
+          ccache-webrtc-
 
     - name: Create build workspace
       shell: bash
@@ -191,6 +216,7 @@ runs:
           use_custom_libcxx=false
           treat_warnings_as_errors=false
           use_rtti=true
+          cc_wrapper="ccache"
         '
         
         mkdir -p out/android
@@ -234,6 +260,10 @@ runs:
         
         echo "download_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
         echo "build_info=WebRTC M$WEBRTC_MILESTONE ($WEBRTC_FULL_VERSION) AAR built successfully" >> $GITHUB_OUTPUT
+        
+        # Display ccache statistics
+        echo "Final ccache stats:"
+        ccache --show-stats
 
     - name: Send Slack notification
       if: ${{ inputs.enable_slack_notifications == 'true' && inputs.slack_webhook_url != '' }}

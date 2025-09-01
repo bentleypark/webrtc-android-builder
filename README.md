@@ -1,21 +1,19 @@
 # 🚀 WebRTC Android Builder
 
-**Universal WebRTC Android AAR Build System**
+**GitHub Actions-powered WebRTC Android AAR Build System**
 
 Build WebRTC Android libraries automatically in the cloud using GitHub Actions, eliminating local build complexity and
 compatibility issues across all platforms.
 
 ## ✨ Key Features
 
-- 🌐 **Universal Platform Support** - Works on all operating systems (Windows, macOS, Linux)
 - ☁️ **Zero Local Resources** - No local build environment required
-- ⚡ **Fast Cloud Build** - 1.5 hours vs local 4-8 hours
-- 🎯 **Stable WebRTC** - M139 (branch-heads/7258) current stable with automatic version detection
-- 📱 **Android Compatibility** - Latest WebRTC features
-- 🔄 **Full Automation** - Push, tag, and scheduled builds
-- 📦 **Ready to Use** - Direct AAR file download
+- ⚡ **Cloud Build** - Generally saves several hours (varies by hardware/branch)
+- 🎯 **Flexible WebRTC Versions** - Build any WebRTC branch with automatic version detection
+- 📱 **Android Compatibility** - WebRTC features from selected branch
+- 📦 **Ready to Use** - Direct AAR file download (includes multi-ABI, may require ProGuard/R8/NDK configuration based on project setup)
 - 💬 **Slack Integration** - Build notifications with results
-- 🛡️ **Security Enhanced** - Latest security patches included
+- 🛡️ **Security Enhanced** - Security patches up to selected branch level
 
 ## 🏗️ Build Architecture
 
@@ -25,7 +23,7 @@ compatibility issues across all platforms.
 ┌─────────────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Any Device (Client)   │───▶│  GitHub Actions  │───▶│   Build Result  │
 │                         │    │                  │    │                 │
-│ • Windows/macOS/Linux   │    │ • Ubuntu 22.04   │    │ • AAR File      │
+│ • Windows/macOS/Linux   │    │ • Ubuntu Latest  │    │ • AAR File      │
 │ • Simple Git Push       │    │ • depot_tools    │    │ • Build Info    │
 │ • Zero Local Resources  │    │ • WebRTC Source  │    │ • Artifacts     │
 └─────────────────────────┘    └──────────────────┘    └─────────────────┘
@@ -43,32 +41,27 @@ compatibility issues across all platforms.
 ### Build Process Flow
 
 ```
-1. 🔄  Trigger from Any Device (Manual/Tag/Schedule)
-2. 🖥️  Setup Ubuntu 22.04 Cloud Environment  
+1. 🔄  Trigger via GitHub Actions Workflow
+2. 🖥️  Setup Ubuntu Latest Cloud Environment  
 3. 🛠️  Install depot_tools & Dependencies
-4. 📥  Fetch WebRTC Source (branch-heads/7339 default)
+4. 📥  Fetch WebRTC Source (branch-heads/7258 default)
 5. ⚙️  Configure Build (architectures, debug/release)
-6. 🔨  Compile AAR (libwebrtc-M140-7339-patched-X.aar)
+6. 🔨  Compile AAR (libwebrtc-M139-7258-patched-X.aar)
 7. ✅  Verify & Package
-8. 📤  Upload Artifacts (Download from Any Device)
+8. 📤  Upload Artifacts for Download
 9. 💬  Send Slack Notifications
 ```
 
 ### 🌐 **Universal Platform Compatibility**
 
-**Supported Platforms**:
-| Platform | Compatibility | Performance | Notes |
-|----------|--------------|-------------|-------|
-| **Windows** | ✅ Perfect | ⭐⭐⭐⭐⭐ | All versions supported |
-| **macOS** | ✅ Perfect | ⭐⭐⭐⭐⭐ | M1/M2/M3/M4 & Intel |
-| **Linux** | ✅ Perfect | ⭐⭐⭐⭐⭐ | All distributions |
-
 **Why It Works on All Platforms**:
 
-- **Cloud-Based Build**: All compilation happens on GitHub's Ubuntu runners
+- **Cloud-Based Build**: All compilation happens on GitHub's Ubuntu runners (ubuntu-latest = Ubuntu 24.04 as of Jan 2025) - local systems only trigger workflows and download artifacts
 - **Local Independence**: Your device only triggers the build and downloads results
 - **No Architecture Conflicts**: Eliminates local build environment issues
 - **Resource Efficient**: No local memory, disk, or CPU requirements
+- **Runner Stability**: Consider using `runs-on: ubuntu-24.04` for build consistency if package changes cause issues
+- **Build Optimization**: Integrated ccache compiler caching and `actions/cache` for optimal build performance and reduced minutes consumption
 
 ## 🚀 Quick Start (5 minutes)
 
@@ -108,7 +101,7 @@ To use this action in your workflow, add the following step to your `.github/wor
 ### Step 4: Download AAR
 
 - After build completion, check **Artifacts** section
-- Download AAR file (e.g., `libwebrtc-M140-7339-patched-X.aar` for M140)
+- Download AAR file (e.g., `libwebrtc-M139-7258-patched-X.aar` for M139)
 - Copy to your Android project's `app/libs/` folder
 
 ## 📱 Android Project Integration
@@ -134,7 +127,11 @@ android {
 }
 
 dependencies {
-    implementation files('libs/libwebrtc-M140-7339-patched-X.aar')  // Example: M140, X = current patch number
+    // Method 1: Direct file reference (simplest)
+    implementation files('libs/libwebrtc-M139-7258-patched-X.aar')
+    
+    // Method 3: Using fileTree for multiple AARs
+    // implementation fileTree(dir: 'libs', include: ['*.aar'])
     
     // Additional dependencies (if needed)
     implementation 'androidx.appcompat:appcompat:1.6.1'
@@ -142,49 +139,43 @@ dependencies {
 }
 ```
 
+**Method 2: Using flatDir repository (recommended for production)**
+
+Add to your module's `repositories` block:
+
+```gradle
+repositories {
+    flatDir {
+        dirs 'libs'
+    }
+}
+```
+
+Then use in dependencies:
+
+```gradle
+dependencies {
+    implementation name: 'libwebrtc-M139-7258-patched-X', ext: 'aar'
+}
+```
+
 ### ProGuard Rules (`proguard-rules.pro`)
 
 ```proguard
-# WebRTC library protection
+# WebRTC library protection (essential rules only)
 -keep class org.webrtc.** { *; }
 -dontwarn org.webrtc.**
 
-# JNI method protection
+# JNI methods protection
 -keepclasseswithmembernames class * {
     native <methods>;
 }
 
-# WebRTC callback protection
+# Core WebRTC callbacks
 -keep class * implements org.webrtc.PeerConnection$Observer { *; }
 -keep class * implements org.webrtc.SdpObserver { *; }
 ```
 
-### Basic Usage
-
-```kotlin
-import org.webrtc.*
-import android.content.Context
-import android.util.Log
-
-class WebRTCManager {
-    private lateinit var peerConnectionFactory: PeerConnectionFactory
-
-    fun initialize(context: Context) {
-        // WebRTC initialization
-        PeerConnectionFactory.initialize(
-            PeerConnectionFactory.InitializationOptions.builder(context)
-                .setEnableInternalTracer(true)
-                .createInitializationOptions()
-        )
-
-        // Create PeerConnectionFactory
-        peerConnectionFactory = PeerConnectionFactory.builder()
-            .createPeerConnectionFactory()
-
-        Log.d("WebRTC", "✅ WebRTC initialized successfully!")
-    }
-}
-```
 
 ## 📥 Inputs
 
@@ -209,35 +200,14 @@ This action produces the following outputs:
 | `download_url` | The URL to the GitHub Actions run where the build artifacts can be downloaded.      |
 | `build_info`   | A summary of the build information.                                                 |
 
-### Example: Using Outputs
-
-You can use the outputs from this action in subsequent steps of your workflow. To do this, give the build step an `id`.
-
-```yaml
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Build WebRTC AAR
-        id: webrtc_build # Add an ID here
-        uses: bentleypark/webrtc-android-builder@v1
-        with:
-          enable_slack_notifications: 'false'
-
-      - name: Announce AAR URL
-        run: |
-          echo "Build complete!"
-          echo "You can download the artifacts from: ${{ steps.webrtc_build.outputs.download_url }}"
-```
 
 ## ⚙️ Build Configuration Options
 
 ### WebRTC Branch Selection
 
 The action automatically detects the WebRTC milestone version from the branch name and generates dynamic AAR filenames.
+
+**Example Branches** (refer to [Chromium Dash](https://chromiumdash.appspot.com/branches) for current mappings):
 
 | Branch              | Version | Release Status         | AAR Filename Pattern |
 |---------------------|---------|------------------------|----------------------|
@@ -253,10 +223,7 @@ The action automatically detects the WebRTC milestone version from the branch na
 
 Need to find the right branch for your target milestone? Check [Chromium Dash](https://chromiumdash.appspot.com/branches) for official branch-to-milestone mappings.
 
-**Release Status Verification**: The above status is verified using Chrome for Testing API:
-- **Stable**: `139.0.7258.154` (M139)
-- **Beta**: `140.0.7339.41` (M140) 
-- **Dev**: `141.0.7378.3` (M141)
+**Release Status Verification**: Visit [Chromium Dash](https://chromiumdash.appspot.com/branches) for current Chrome release status and milestone mappings.
 
 **Note**: The patch number (`X`) in AAR filenames is dynamic and automatically detected from the branch's current VERSION file. This ensures you always get the latest patches and security fixes for each milestone.
 
@@ -278,11 +245,12 @@ target_arch: "armeabi-v7a,arm64-v8a,x86,x86_64"
 | Build Environment  | Build Time | CPU/Memory  | Disk Space | Cost          | Platform Compatibility |
 |--------------------|------------|-------------|------------|---------------|------------------------|
 | **GitHub Actions** | 1.5 hours  | 4 vCPU/16GB | 14GB SSD   | Free*         | **All Platforms** ✅    |
+| (with ccache)      | 0.5-1 hour | 4 vCPU/16GB | 14GB SSD   | Free*         | **All Platforms** ✅    |
 | Local Build        | 4-8 hours  | Varies      | 100GB+     | Power         | Platform Issues ❌      |
 | Jenkins (AWS)      | 1.5 hours  | Custom      | Custom     | $30-120/month | All Platforms ✅        |
 | Docker Local       | 6-10 hours | Varies      | 100GB+     | Power         | Docker Required ⚠️     |
 
-*Free for public repositories. Private repositories: 2,000 minutes/month (Free), 3,000 minutes/month (Pro/Team)
+*Public repositories: unlimited free. Private repositories: 2,000 minutes/month (Free plan), 3,000 minutes/month (Team plan)
 
 ## 💬 Slack Notifications
 
@@ -364,17 +332,6 @@ webrtc-android-builder/
 └── action.yml                          # GitHub Action definition
 ```
 
-## 📈 Version History
-
-### v1.0.0 (Current - M140)
-
-- ✅ Universal platform support (Windows/macOS/Linux)
-- ✅ Latest WebRTC M140/M139/M138/M137 support
-- ✅ Enhanced security with latest patches
-- ✅ Slack build notifications
-- ✅ Modern Android compatibility
-- ✅ Automatic release system
-- ✅ Detailed build information
 
 ## 🤝 Contributing
 
@@ -395,11 +352,17 @@ webrtc-android-builder/
 - **Security Patches**: Latest CVE fixes included
 - **Modern Android**: Full Android compatibility
 - **Secure Build**: All builds from official WebRTC source
-- **H265/HEVC Support**: Advanced video codec features
 
-## 📄 License
+## 📄 License & Patents
 
-This project is licensed under MIT License. WebRTC itself is under BSD License.
+**This Project**: Licensed under [MIT License](LICENSE)
+
+**WebRTC**: Licensed under [BSD-3-Clause License](https://webrtc.org/support/license/)
+- Copyright (c) 2011, The WebRTC project authors. All rights reserved.
+- Source: [webrtc.org](https://webrtc.org/)
+- Additional patent grant: [PATENTS](https://webrtc.googlesource.com/src/+/main/PATENTS)
+
+**Important**: WebRTC includes an additional patent grant that provides protection for users and implementers. The patent grant terminates if patent litigation is instituted against the WebRTC implementation.
 
 ## ⭐ Star this repository!
 

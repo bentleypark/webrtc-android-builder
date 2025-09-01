@@ -91,8 +91,20 @@ android {
 }
 
 dependencies {
-    // 🚀 WebRTC AAR file
-    implementation files('libs/libwebrtc-M137-7151-patched-X.aar')  // Example: M137, X = patch number
+    // Method 1: Direct file reference
+    implementation files('libs/libwebrtc-M139-7258-patched-X.aar')
+    
+    // Method 2: Using flatDir repository (recommended)
+    // Add this to your module's repositories block:
+    // repositories {
+    //     flatDir {
+    //         dirs 'libs'
+    //     }
+    // }
+    // Then use: implementation name: 'libwebrtc-M139-7258-patched-X', ext: 'aar'
+    
+    // Method 3: Using fileTree for multiple AARs
+    // implementation fileTree(dir: 'libs', include: ['*.aar'])
     
     // Android base libraries
     implementation 'androidx.appcompat:appcompat:1.6.1'
@@ -118,38 +130,30 @@ dependencies {
 
 ## 🛡️ ProGuard Rules (proguard-rules.pro)
 ```proguard
-# Protect WebRTC library
+# WebRTC library protection (essential rules only)
 -keep class org.webrtc.** { *; }
--keepclassmembers class org.webrtc.** { *; }
 -dontwarn org.webrtc.**
 
-# Protect JNI methods
+# JNI methods protection
 -keepclasseswithmembernames class * {
     native <methods>;
 }
 
-# Protect WebRTC callbacks
+# Core WebRTC callbacks
 -keep class * implements org.webrtc.PeerConnection$Observer { *; }
 -keep class * implements org.webrtc.SdpObserver { *; }
--keep class * implements org.webrtc.StatsObserver { *; }
--keep class * implements org.webrtc.MediaStreamTrack$Observer { *; }
 
-# Protect data classes (for JSON serialization)
--keep class com.yourcompany.webrtcapp.models.** { *; }
+# Data classes for JSON serialization (if using)
+# -keep class com.yourcompany.webrtcapp.models.** { *; }
 
-# Gson related settings
--keepattributes Signature
--keepattributes *Annotation*
--dontwarn sun.misc.**
--keep class com.google.gson.examples.android.model.** { <fields>; }
--keep class * extends com.google.gson.TypeAdapter
--keep class * implements com.google.gson.TypeAdapterFactory
--keep class * implements com.google.gson.JsonSerializer
--keep class * implements com.google.gson.JsonDeserializer
+# Gson support (if using)
+# -keepattributes Signature
+# -keep class * extends com.google.gson.TypeAdapter
+# -keep class * implements com.google.gson.TypeAdapterFactory
 
-# OkHttp related settings
--dontwarn okhttp3.**
--dontwarn okio.**
+# OkHttp support (if using)
+# -dontwarn okhttp3.**
+# -dontwarn okio.**
 ```
 
 ## 📋 AndroidManifest.xml
