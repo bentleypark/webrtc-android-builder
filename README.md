@@ -221,8 +221,7 @@ target_arch: "armeabi-v7a,arm64-v8a,x86,x86_64"
 
 | Build Environment  | Build Time | CPU/Memory  | Disk Space | Cost          | Platform Compatibility |
 |--------------------|------------|-------------|------------|---------------|------------------------|
-| **GitHub Actions** | 1.5 hours  | 4 vCPU/16GB | 14GB SSD   | Free*         | **All Platforms** ✅    |
-| (with ccache)      | 0.5-1 hour | 4 vCPU/16GB | 14GB SSD   | Free*         | **All Platforms** ✅    |
+| **GitHub Actions** | Under 1 hour | 4 vCPU/16GB | 14GB SSD   | Free*         | **All Platforms** ✅    |
 | Local Build        | 4-8 hours  | Varies      | 100GB+     | Power         | Platform Issues ❌      |
 | Jenkins (AWS)      | 1.5 hours  | Custom      | Custom     | $30-120/month | All Platforms ✅        |
 | Docker Local       | 6-10 hours | Varies      | 100GB+     | Power         | Docker Required ⚠️     |
