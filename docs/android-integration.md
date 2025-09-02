@@ -172,19 +172,10 @@ dependencies {
 ```
 
 dependencies {
-// Method 1: Direct file reference
-implementation files('libs/libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar')  // 예시: libwebrtc-M139-7258-patched-98.aar
-
-    // Method 2: Using flatDir repository (recommended)
-    // Add this to your module's repositories block:
-    // repositories {
-    //     flatDir {
-    //         dirs 'libs'
-    //     }
-    // }
-    // Then use: implementation name: 'libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX', ext: 'aar'  // 예시: libwebrtc-M139-7258-patched-98
+    // Method 1: Direct file reference
+    implementation files('libs/libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar')  // example: libwebrtc-M139-7258-patched-98.aar
     
-    // Method 3: Using fileTree for multiple AARs
+    // Method 2: Using fileTree for multiple AARs
     // implementation fileTree(dir: 'libs', include: ['*.aar'])
     
     // Android base libraries

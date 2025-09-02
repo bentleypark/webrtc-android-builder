@@ -126,35 +126,15 @@ android {
 }
 
 dependencies {
-    // Method 1: Direct file reference (simplest)
+    // Method 1: Direct file reference
     implementation files('libs/libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar')  // example: libwebrtc-M139-7258-patched-98.aar
     
-    // Method 3: Using fileTree for multiple AARs
+    // Method 2: Using fileTree for multiple AARs
     // implementation fileTree(dir: 'libs', include: ['*.aar'])
     
     // Additional dependencies (if needed)
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.10.0'
-}
-```
-
-**Method 2: Using flatDir repository (recommended for production)**
-
-Add to your module's `repositories` block:
-
-```gradle
-repositories {
-    flatDir {
-        dirs 'libs'
-    }
-}
-```
-
-Then use in dependencies:
-
-```gradle
-dependencies {
-    implementation name: 'libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX', ext: 'aar'  // example: libwebrtc-M139-7258-patched-98
 }
 ```
 
