@@ -104,7 +104,7 @@ To use this action in your workflow, add the following step to your `.github/wor
 ### Step 4: Download AAR
 
 - After build completion, check **Artifacts** section
-- Download AAR file (pattern: `libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar`, 예시: `libwebrtc-M139-7258-patched-98.aar`)
+- Download AAR file (pattern: `libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar`, example: `libwebrtc-M139-7258-patched-98.aar`)
 - Copy to your Android project's `app/libs/` folder
 
 ## 📱 Android Project Integration
@@ -131,7 +131,7 @@ android {
 
 dependencies {
     // Method 1: Direct file reference (simplest)
-    implementation files('libs/libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar')  // 예시: libwebrtc-M139-7258-patched-98.aar
+    implementation files('libs/libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar')  // example: libwebrtc-M139-7258-patched-98.aar
     
     // Method 3: Using fileTree for multiple AARs
     // implementation fileTree(dir: 'libs', include: ['*.aar'])
@@ -158,7 +158,7 @@ Then use in dependencies:
 
 ```gradle
 dependencies {
-    implementation name: 'libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX', ext: 'aar'  // 예시: libwebrtc-M139-7258-patched-98
+    implementation name: 'libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX', ext: 'aar'  // example: libwebrtc-M139-7258-patched-98
 }
 ```
 
@@ -221,7 +221,7 @@ The action automatically detects the WebRTC milestone version from the branch na
 **Dynamic Version Detection**: The action uses Chromium's Gitiles API to fetch exact version information from each branch's VERSION file, ensuring accurate AAR filenames.
 
 **AAR Filename Pattern**: `libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar`
-- 예시: `libwebrtc-M139-7258-patched-98.aar` (M139, branch-heads/7258, patch 98)
+- example: `libwebrtc-M139-7258-patched-98.aar` (M139, branch-heads/7258, patch 98)
 
 ### 📊 WebRTC Milestone Reference
 
@@ -273,7 +273,7 @@ plan)
 • Configuration: release
 
 📦 AAR File: libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar
-(예시: libwebrtc-M140-7339-patched-15.aar)
+(example: libwebrtc-M140-7339-patched-15.aar)
 🔒 SHA256: a1b2c3d4e5f6789...
 
 🔗 [Download Artifacts](link)
