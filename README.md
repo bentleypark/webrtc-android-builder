@@ -10,7 +10,6 @@ compatibility issues across all platforms.
 - ☁️ **Zero Local Resources** - No local build environment required
 - ⚡ **Cloud Build** - Generally saves several hours (varies by hardware/branch)
 - 🎯 **Flexible WebRTC Versions** - Build any WebRTC branch with automatic version detection
-- 📱 **Android Compatibility** - WebRTC features from selected branch
 - 📦 **Ready to Use** - Direct AAR file download (includes multi-ABI, may require ProGuard/R8/NDK configuration based on
   project setup)
 - 💬 **Slack Integration** - Build notifications with results
