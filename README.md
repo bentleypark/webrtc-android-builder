@@ -244,7 +244,7 @@ plan)
 
 📦 AAR File: libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar
 (example: libwebrtc-M140-7339-patched-15.aar)
-🔒 SHA256: a1b2c3d4e5f6789...
+🔒 SHA256: a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890
 
 🔗 [Download Artifacts](link)
 ```
