@@ -5,9 +5,12 @@
 
 This guide demonstrates integration with **dynamically generated WebRTC AAR files** from our GitHub Action. The action automatically detects the milestone version from the selected branch and generates appropriately named AAR files:
 
-- **branch-heads/7151** → `libwebrtc-M137-7151-patched-X.aar` (M137)
-- **branch-heads/7103** → `libwebrtc-M136-7103-patched-X.aar` (M136)
-- **branch-heads/7000+** → `libwebrtc-M135-7000-patched-X.aar` (M135)
+**AAR Filename Pattern**: `libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar`
+
+예시:
+- **branch-heads/7151** → `libwebrtc-M137-7151-patched-45.aar` (M137)
+- **branch-heads/7103** → `libwebrtc-M136-7103-patched-78.aar` (M136)
+- **branch-heads/7000+** → `libwebrtc-M135-7000-patched-22.aar` (M135)
 
 **🔗 Milestone Reference**: Use [Chromium Dash](https://chromiumdash.appspot.com/branches) to find branch numbers for your target WebRTC milestone.
 
@@ -16,7 +19,7 @@ This guide demonstrates integration with **dynamically generated WebRTC AAR file
 MyWebRTCApp/
 ├── app/
 │   ├── libs/
-│   │   └── libwebrtc-MXXX-XXXX-patched-X.aar          # The built AAR file (dynamic milestone)
+│   │   └── libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar  # The built AAR file (예시: libwebrtc-M139-7258-patched-98.aar)
 │   ├── src/main/
 │   │   └── java/.../
 │   │       ├── MainActivity.kt
@@ -92,7 +95,7 @@ android {
 
 dependencies {
     // Method 1: Direct file reference
-    implementation files('libs/libwebrtc-M139-7258-patched-X.aar')
+    implementation files('libs/libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar')  // 예시: libwebrtc-M139-7258-patched-98.aar
     
     // Method 2: Using flatDir repository (recommended)
     // Add this to your module's repositories block:
@@ -101,7 +104,7 @@ dependencies {
     //         dirs 'libs'
     //     }
     // }
-    // Then use: implementation name: 'libwebrtc-M139-7258-patched-X', ext: 'aar'
+    // Then use: implementation name: 'libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX', ext: 'aar'  // 예시: libwebrtc-M139-7258-patched-98
     
     // Method 3: Using fileTree for multiple AARs
     // implementation fileTree(dir: 'libs', include: ['*.aar'])

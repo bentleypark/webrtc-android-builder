@@ -11,7 +11,8 @@ compatibility issues across all platforms.
 - ⚡ **Cloud Build** - Generally saves several hours (varies by hardware/branch)
 - 🎯 **Flexible WebRTC Versions** - Build any WebRTC branch with automatic version detection
 - 📱 **Android Compatibility** - WebRTC features from selected branch
-- 📦 **Ready to Use** - Direct AAR file download (includes multi-ABI, may require ProGuard/R8/NDK configuration based on project setup)
+- 📦 **Ready to Use** - Direct AAR file download (includes multi-ABI, may require ProGuard/R8/NDK configuration based on
+  project setup)
 - 💬 **Slack Integration** - Build notifications with results
 - 🛡️ **Security Enhanced** - Security patches up to selected branch level
 
@@ -46,7 +47,7 @@ compatibility issues across all platforms.
 3. 🛠️  Install depot_tools & Dependencies
 4. 📥  Fetch WebRTC Source (branch-heads/7258 default)
 5. ⚙️  Configure Build (architectures, debug/release)
-6. 🔨  Compile AAR (libwebrtc-M139-7258-patched-X.aar)
+6. 🔨  Compile AAR (libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar)
 7. ✅  Verify & Package
 8. 📤  Upload Artifacts for Download
 9. 💬  Send Slack Notifications
@@ -56,12 +57,14 @@ compatibility issues across all platforms.
 
 **Why It Works on All Platforms**:
 
-- **Cloud-Based Build**: All compilation happens on GitHub's Ubuntu runners (ubuntu-latest = Ubuntu 24.04 as of Jan 2025) - local systems only trigger workflows and download artifacts
+- **Cloud-Based Build**: All compilation happens on GitHub's Ubuntu runners (ubuntu-latest = Ubuntu 24.04 as of Jan
+  2025) - local systems only trigger workflows and download artifacts
 - **Local Independence**: Your device only triggers the build and downloads results
 - **No Architecture Conflicts**: Eliminates local build environment issues
 - **Resource Efficient**: No local memory, disk, or CPU requirements
 - **Runner Stability**: Consider using `runs-on: ubuntu-24.04` for build consistency if package changes cause issues
-- **Build Optimization**: Integrated ccache compiler caching and `actions/cache` for optimal build performance and reduced minutes consumption
+- **Build Optimization**: Integrated ccache compiler caching and `actions/cache` for optimal build performance and
+  reduced minutes consumption
 
 ## 🚀 Quick Start (5 minutes)
 
@@ -101,7 +104,7 @@ To use this action in your workflow, add the following step to your `.github/wor
 ### Step 4: Download AAR
 
 - After build completion, check **Artifacts** section
-- Download AAR file (e.g., `libwebrtc-M139-7258-patched-X.aar` for M139)
+- Download AAR file (pattern: `libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar`, 예시: `libwebrtc-M139-7258-patched-98.aar`)
 - Copy to your Android project's `app/libs/` folder
 
 ## 📱 Android Project Integration
@@ -128,7 +131,7 @@ android {
 
 dependencies {
     // Method 1: Direct file reference (simplest)
-    implementation files('libs/libwebrtc-M139-7258-patched-X.aar')
+    implementation files('libs/libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar')  // 예시: libwebrtc-M139-7258-patched-98.aar
     
     // Method 3: Using fileTree for multiple AARs
     // implementation fileTree(dir: 'libs', include: ['*.aar'])
@@ -155,7 +158,7 @@ Then use in dependencies:
 
 ```gradle
 dependencies {
-    implementation name: 'libwebrtc-M139-7258-patched-X', ext: 'aar'
+    implementation name: 'libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX', ext: 'aar'  // 예시: libwebrtc-M139-7258-patched-98
 }
 ```
 
@@ -176,30 +179,28 @@ dependencies {
 -keep class * implements org.webrtc.SdpObserver { *; }
 ```
 
-
 ## 📥 Inputs
 
 This action has the following inputs:
 
-| Input                        | Description                                                                               | Default                 | Required |
-|------------------------------|-------------------------------------------------------------------------------------------|-------------------------|:--------:|
+| Input                        | Description                                                                                             | Default                 | Required |
+|------------------------------|---------------------------------------------------------------------------------------------------------|-------------------------|:--------:|
 | `webrtc_branch`              | The WebRTC branch to build. Supports branch-heads/XXXX format. Automatically detects milestone version. | `branch-heads/7258`     | `false`  |
-| `target_arch`                | A comma-separated list of target architectures.                                           | `armeabi-v7a,arm64-v8a` | `false`  |
-| `build_config`               | The build configuration, either `release` or `debug`.                                     | `release`               | `false`  |
-| `slack_webhook_url`          | The Slack webhook URL for sending build notifications. Must be stored as a GitHub secret. | `N/A`                   | `false`  |
-| `slack_channel`              | The Slack channel to send notifications to.                                               | `#build`                | `false`  |
-| `enable_slack_notifications` | Set to `true` to enable Slack notifications. Requires `slack_webhook_url` to be set.      | `false`                 | `false`  |
+| `target_arch`                | A comma-separated list of target architectures.                                                         | `armeabi-v7a,arm64-v8a` | `false`  |
+| `build_config`               | The build configuration, either `release` or `debug`.                                                   | `release`               | `false`  |
+| `slack_webhook_url`          | The Slack webhook URL for sending build notifications. Must be stored as a GitHub secret.               | `N/A`                   | `false`  |
+| `slack_channel`              | The Slack channel to send notifications to.                                                             | `#build`                | `false`  |
+| `enable_slack_notifications` | Set to `true` to enable Slack notifications. Requires `slack_webhook_url` to be set.                    | `false`                 | `false`  |
 
 ## 📤 Outputs
 
 This action produces the following outputs:
 
-| Output         | Description                                                                         |
-|----------------|-------------------------------------------------------------------------------------|
-| `aar_filename` | The filename of the generated AAR package (e.g., `libwebrtc-M140-7339-patched-X.aar`). |
-| `download_url` | The URL to the GitHub Actions run where the build artifacts can be downloaded.      |
-| `build_info`   | A summary of the build information.                                                 |
-
+| Output         | Description                                                                             |
+|----------------|-----------------------------------------------------------------------------------------|
+| `aar_filename` | The filename of the generated AAR package. Pattern: `libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar` |
+| `download_url` | The URL to the GitHub Actions run where the build artifacts can be downloaded.          |
+| `build_info`   | A summary of the build information.                                                     |
 
 ## ⚙️ Build Configuration Options
 
@@ -210,22 +211,27 @@ The action automatically detects the WebRTC milestone version from the branch na
 **Example Branches** (refer to [Chromium Dash](https://chromiumdash.appspot.com/branches) for current mappings):
 
 | Branch              | Version | Release Status         | AAR Filename Pattern |
-|---------------------|---------|------------------------|----------------------|
-| `branch-heads/7339` | M140    | **Beta** (Next Stable) | `libwebrtc-M140-7339-patched-X.aar` |
-| `branch-heads/7258` | M139    | **Stable** (Current)   | `libwebrtc-M139-7258-patched-X.aar` |
-| `branch-heads/7204` | M138    | **Stable** (Previous)  | `libwebrtc-M138-7204-patched-X.aar` |
-| `branch-heads/7151` | M137    | **Stable** (LTS)       | `libwebrtc-M137-7151-patched-X.aar` |
-| `branch-heads/7103` | M136    | Legacy                 | `libwebrtc-M136-7103-patched-X.aar` |
+|---------------------|---------|------------------------|-----------------------|
+| `branch-heads/7339` | M140    | **Beta** (Next Stable) | `libwebrtc-M140-7339-patched-{PATCH}.aar` |
+| `branch-heads/7258` | M139    | **Stable** (Current)   | `libwebrtc-M139-7258-patched-{PATCH}.aar` |
+| `branch-heads/7204` | M138    | **Stable** (Previous)  | `libwebrtc-M138-7204-patched-{PATCH}.aar` |
+| `branch-heads/7151` | M137    | **Stable** (LTS)       | `libwebrtc-M137-7151-patched-{PATCH}.aar` |
+| `branch-heads/7103` | M136    | Legacy                 | `libwebrtc-M136-7103-patched-{PATCH}.aar` |
 
-**Dynamic Version Detection**: The action uses Chromium's Gitiles API to fetch exact version information from each branch's VERSION file, ensuring accurate AAR filenames. `X` represents the current patch number which updates automatically with each branch commit.
+**Dynamic Version Detection**: The action uses Chromium's Gitiles API to fetch exact version information from each branch's VERSION file, ensuring accurate AAR filenames.
+
+**AAR Filename Pattern**: `libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar`
+- 예시: `libwebrtc-M139-7258-patched-98.aar` (M139, branch-heads/7258, patch 98)
 
 ### 📊 WebRTC Milestone Reference
 
-Need to find the right branch for your target milestone? Check [Chromium Dash](https://chromiumdash.appspot.com/branches) for official branch-to-milestone mappings.
+Need to find the right branch for your target milestone?
+Check [Chromium Dash](https://chromiumdash.appspot.com/branches) for official branch-to-milestone mappings.
 
-**Release Status Verification**: Visit [Chromium Dash](https://chromiumdash.appspot.com/branches) for current Chrome release status and milestone mappings.
+**Release Status Verification**: Visit [Chromium Dash](https://chromiumdash.appspot.com/branches) for current Chrome
+release status and milestone mappings.
 
-**Note**: The patch number (`X`) in AAR filenames is dynamic and automatically detected from the branch's current VERSION file. This ensures you always get the latest patches and security fixes for each milestone.
+**Note**: The patch number (`XX`) in AAR filenames is dynamic and automatically detected from the branch's current VERSION file. This ensures you always get the latest patches and security fixes for each milestone.
 
 ### Target Architecture Options
 
@@ -250,7 +256,8 @@ target_arch: "armeabi-v7a,arm64-v8a,x86,x86_64"
 | Jenkins (AWS)      | 1.5 hours  | Custom      | Custom     | $30-120/month | All Platforms ✅        |
 | Docker Local       | 6-10 hours | Varies      | 100GB+     | Power         | Docker Required ⚠️     |
 
-*Public repositories: unlimited free. Private repositories: 2,000 minutes/month (Free plan), 3,000 minutes/month (Team plan)
+*Public repositories: unlimited free. Private repositories: 2,000 minutes/month (Free plan), 3,000 minutes/month (Team
+plan)
 
 ## 💬 Slack Notifications
 
@@ -265,7 +272,9 @@ target_arch: "armeabi-v7a,arm64-v8a,x86,x86_64"
 • Architectures: armeabi-v7a,arm64-v8a
 • Configuration: release
 
-📦 AAR File: libwebrtc-M140-7339-patched-X.aar
+📦 AAR File: libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar
+(예시: libwebrtc-M140-7339-patched-15.aar)
+🔒 SHA256: a1b2c3d4e5f6789...
 
 🔗 [Download Artifacts](link)
 ```
@@ -332,7 +341,6 @@ webrtc-android-builder/
 └── action.yml                          # GitHub Action definition
 ```
 
-
 ## 🤝 Contributing
 
 ### Bug Reports
@@ -358,11 +366,13 @@ webrtc-android-builder/
 **This Project**: Licensed under [MIT License](LICENSE)
 
 **WebRTC**: Licensed under [BSD-3-Clause License](https://webrtc.org/support/license/)
+
 - Copyright (c) 2011, The WebRTC project authors. All rights reserved.
 - Source: [webrtc.org](https://webrtc.org/)
 - Additional patent grant: [PATENTS](https://webrtc.googlesource.com/src/+/main/PATENTS)
 
-**Important**: WebRTC includes an additional patent grant that provides protection for users and implementers. The patent grant terminates if patent litigation is instituted against the WebRTC implementation.
+**Important**: WebRTC includes an additional patent grant that provides protection for users and implementers. The
+patent grant terminates if patent litigation is instituted against the WebRTC implementation.
 
 ## ⭐ Star this repository!
 

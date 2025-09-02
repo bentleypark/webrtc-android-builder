@@ -87,16 +87,6 @@ jobs:
             exit 1
           fi
       
-      - name: Upload Test Artifacts
-        uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: test-webrtc-aar-${{ github.run_number }}
-          path: |
-            webrtc-build/src/*.aar
-            webrtc-build/src/build-info.txt
-          retention-days: 7
-      
       - name: Test Results Summary
         if: always()
         run: |

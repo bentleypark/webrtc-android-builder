@@ -145,21 +145,44 @@ runs:
         gclient --version
         echo "GYP_DEFINES=OS=android" >> $GITHUB_ENV
         echo "DEPOT_TOOLS_UPDATE=0" >> $GITHUB_ENV
-        
-        # Setup ccache environment
-        echo "CCACHE_DIR=$HOME/.cache/ccache" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=2G" >> $GITHUB_ENV
-        echo "CCACHE_COMPRESS=1" >> $GITHUB_ENV
-        echo "CCACHE_COMPRESSLEVEL=6" >> $GITHUB_ENV
 
+    - name: Setup ccache environment
+      shell: bash
+      run: |
+        # Setup ccache environment variables (fixed for all subsequent steps)
+        echo "CCACHE_DIR=$HOME/.cache/ccache" >> $GITHUB_ENV
+        echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESS=1" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=2G" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESSLEVEL=6" >> $GITHUB_ENV
+        echo "CCACHE_SLOPPINESS=file_macro,time_macros,include_file_mtime,include_file_ctime" >> $GITHUB_ENV
+    
+    - name: Prepare cache key
+      shell: bash
+      run: |
+        # Sanitize target_arch for cache key (remove spaces, commas to underscores)
+        SANITIZED_ARCH=$(echo "${{ inputs.target_arch }}" | tr ', ' '_' | tr -d ' ')
+        echo "SANITIZED_ARCH=$SANITIZED_ARCH" >> $GITHUB_ENV
+    
+    - name: Cache ccache directory
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ccache
+        key: ccache-webrtc-${{ runner.os }}-M${{ env.WEBRTC_MILESTONE }}-${{ inputs.webrtc_branch }}-${{ env.SANITIZED_ARCH }}-${{ inputs.build_config }}
+        restore-keys: |
+          ccache-webrtc-${{ runner.os }}-M${{ env.WEBRTC_MILESTONE }}-${{ inputs.webrtc_branch }}-${{ env.SANITIZED_ARCH }}-
+          ccache-webrtc-${{ runner.os }}-M${{ env.WEBRTC_MILESTONE }}-${{ inputs.webrtc_branch }}-
+          ccache-webrtc-${{ runner.os }}-M${{ env.WEBRTC_MILESTONE }}-
+          ccache-webrtc-${{ runner.os }}-
+    
     - name: Configure ccache and Git
       shell: bash
       run: |
-        # Configure ccache
+        # Configure ccache after cache restoration
         mkdir -p $HOME/.cache/ccache
-        ccache --zero-stats
+        ccache --set-config max_size=2G
         ccache --show-config
-        echo "Initial ccache stats:"
+        echo "Ccache stats after restoration:"
         ccache --show-stats
         
         # Configure Git
@@ -168,16 +191,6 @@ runs:
         git config --global core.autocrlf false
         git config --global core.filemode false
         git config --global color.ui false
-    
-    - name: Cache ccache directory
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/ccache
-        key: ccache-webrtc-${{ inputs.webrtc_branch }}-${{ inputs.target_arch }}-${{ inputs.build_config }}
-        restore-keys: |
-          ccache-webrtc-${{ inputs.webrtc_branch }}-${{ inputs.target_arch }}-
-          ccache-webrtc-${{ inputs.webrtc_branch }}-
-          ccache-webrtc-
 
     - name: Create build workspace
       shell: bash
@@ -192,13 +205,23 @@ runs:
         cd webrtc-build/src
         echo "Checking out WebRTC branch: ${{ inputs.webrtc_branch }}"
         git checkout ${{ inputs.webrtc_branch }}
-        gclient sync
+        
+        # Optimized gclient sync (parallel, cleanup unversioned)
+        gclient sync --delete_unversioned_trees --jobs=4 --verbose
 
     - name: Install build dependencies
       shell: bash
       run: |
         cd webrtc-build/src
         sudo ./build/install-build-deps.sh --no-prompt --no-chromeos-fonts
+    
+    - name: Initialize ccache for build
+      shell: bash
+      run: |
+        # Reset ccache stats before build for accurate measurement
+        ccache --zero-stats
+        echo "Ccache initialized for build:"
+        ccache --show-stats
 
     - name: Configure build
       shell: bash
@@ -217,6 +240,8 @@ runs:
           treat_warnings_as_errors=false
           use_rtti=true
           cc_wrapper="ccache"
+          symbol_level=0
+          blink_symbol_level=0
         '
         
         mkdir -p out/android
@@ -246,6 +271,16 @@ runs:
           --output "$AAR_FILENAME" \
           --extra-gn-args "is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}"
         
+        # Calculate SHA256 hash for verification
+        AAR_SHA256=$(sha256sum "$AAR_FILENAME" | cut -d' ' -f1)
+        echo "AAR SHA256: $AAR_SHA256"
+        
+        # Export SHA256 for use in subsequent steps (like Slack notifications)
+        echo "AAR_SHA256=$AAR_SHA256" >> $GITHUB_ENV
+        
+        # Create SHA256 file for download
+        echo "$AAR_SHA256  $AAR_FILENAME" > "${AAR_FILENAME}.sha256"
+        
         # Create build info file
         cat > build-info.txt << EOF
         Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
@@ -255,6 +290,7 @@ runs:
         Build Config: ${{ inputs.build_config }}
         Target Architectures: ${{ inputs.target_arch }}
         AAR Filename: $AAR_FILENAME
+        AAR SHA256: $AAR_SHA256
         GitHub Run: ${{ github.run_number }}
         EOF
         
@@ -265,6 +301,17 @@ runs:
         echo "Final ccache stats:"
         ccache --show-stats
 
+    - name: Upload WebRTC AAR artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: webrtc-android-aar-M${{ env.WEBRTC_MILESTONE }}-${{ github.run_number }}
+        path: |
+          webrtc-build/src/*.aar
+          webrtc-build/src/*.sha256
+          webrtc-build/src/build-info.txt
+        retention-days: 30
+        if-no-files-found: error
+
     - name: Send Slack notification
       if: ${{ inputs.enable_slack_notifications == 'true' && inputs.slack_webhook_url != '' }}
       shell: bash
@@ -273,7 +320,7 @@ runs:
           curl -X POST -H 'Content-type: application/json' \
             --data '{
               "channel": "${{ inputs.slack_channel }}",
-              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Milestone: \`M$WEBRTC_MILESTONE\`\n• Version: \`$WEBRTC_FULL_VERSION\`\n• Branch: \`${{ inputs.webrtc_branch }}\`\n• Build: \`$WEBRTC_BUILD\`\n• Patch: \`$WEBRTC_PATCH\`\n• Architectures: \`${{ inputs.target_arch }}\`\n• Configuration: \`${{ inputs.build_config }}\`\n\n📦 *AAR File:* \`${{ steps.build.outputs.aar_filename }}\`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
+              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Milestone: \`M$WEBRTC_MILESTONE\`\n• Version: \`$WEBRTC_FULL_VERSION\`\n• Branch: \`${{ inputs.webrtc_branch }}\`\n• Build: \`$WEBRTC_BUILD\`\n• Patch: \`$WEBRTC_PATCH\`\n• Architectures: \`${{ inputs.target_arch }}\`\n• Configuration: \`${{ inputs.build_config }}\`\n\n📦 *AAR File:* \`${{ steps.build.outputs.aar_filename }}\`\n🔒 *SHA256:* \`$AAR_SHA256\`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
             }' \
             ${{ inputs.slack_webhook_url }}
         fi
