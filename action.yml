@@ -1,5 +1,5 @@
 name: 'WebRTC Android Builder'
-description: 'Build WebRTC Android AAR files automatically in the cloud using GitHub Actions. Universal platform support.'
+description: 'Build WebRTC Android AAR files automatically in the cloud using GitHub Actions.'
 author: 'bentleypark'
 
 branding:
