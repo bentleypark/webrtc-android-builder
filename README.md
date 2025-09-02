@@ -225,11 +225,7 @@ The action automatically detects the WebRTC milestone version from the branch na
 
 ### 📊 WebRTC Milestone Reference
 
-Need to find the right branch for your target milestone?
-Check [Chromium Dash](https://chromiumdash.appspot.com/branches) for official branch-to-milestone mappings.
-
-**Release Status Verification**: Visit [Chromium Dash](https://chromiumdash.appspot.com/branches) for current Chrome
-release status and milestone mappings.
+Need to find the right branch for your target milestone? Check [Chromium Dash](https://chromiumdash.appspot.com/branches) for official branch-to-milestone mappings and current Chrome release status verification.
 
 **Note**: The patch number (`XX`) in AAR filenames is dynamic and automatically detected from the branch's current VERSION file. This ensures you always get the latest patches and security fixes for each milestone.
 
