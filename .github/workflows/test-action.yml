@@ -27,15 +27,6 @@ on:
           - 'armeabi-v7a,arm64-v8a'       # Both ARM architectures
           - 'x86_64'                       # x86 64-bit (emulator)
           - 'arm64-v8a,x86_64'            # ARM64 + x86_64 (most common)
-      
-      build_config:
-        description: 'Build configuration'
-        required: false
-        default: 'release'
-        type: choice
-        options:
-          - release
-          - debug
 
   push:
     branches: [ test-* ]
@@ -54,7 +45,7 @@ jobs:
           echo "🚀 Starting WebRTC Android Builder Test"
           echo "Branch: ${{ github.event.inputs.webrtc_branch }}"
           echo "Architecture: ${{ github.event.inputs.target_arch }}"
-          echo "Build Config: ${{ github.event.inputs.build_config }}"
+          echo "Build Config: release (fixed)"
           echo "Expected milestone: Will be detected dynamically (Current stable: M139)"
       
       - name: Test WebRTC Android Builder (Local Action)
@@ -63,7 +54,6 @@ jobs:
         with:
           webrtc_branch: ${{ github.event.inputs.webrtc_branch }}
           target_arch: ${{ github.event.inputs.target_arch }}
-          build_config: ${{ github.event.inputs.build_config }}
           # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}  # Uncomment if you have Slack webhook
           # slack_channel: '#test-builds'
           # enable_slack_notifications: 'true'
@@ -95,7 +85,7 @@ jobs:
           echo "### Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: ${{ github.event.inputs.webrtc_branch }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Architecture**: ${{ github.event.inputs.target_arch }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Build Config**: ${{ github.event.inputs.build_config }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Config**: release (fixed)" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Information" >> $GITHUB_STEP_SUMMARY

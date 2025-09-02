@@ -44,7 +44,7 @@ compatibility issues across all platforms.
 2. 🖥️  Setup Ubuntu Latest Cloud Environment  
 3. 🛠️  Install depot_tools & Dependencies
 4. 📥  Fetch WebRTC Source (branch-heads/7258 default)
-5. ⚙️  Configure Build (architectures, debug/release)
+5. ⚙️  Configure Build (architectures, release optimized)
 6. 🔨  Compile AAR (libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar)
 7. ✅  Verify & Package
 8. 📤  Upload Artifacts for Download
@@ -76,7 +76,6 @@ To use this action in your workflow, add the following step to your `.github/wor
   with:
     webrtc_branch: 'branch-heads/7258' # Default: M139 (Current Stable), Options: branch-heads/7339 (M140 Beta), branch-heads/7258 (M139 Stable), branch-heads/7204 (M138 Stable)
     target_arch: 'armeabi-v7a,arm64-v8a' # Default: arm64-v8a,armeabi-v7a
-    build_config: 'release' # Default: release
     # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }} # Optional: Uncomment for Slack notifications
     # slack_channel: '#build-notifications' # Optional: Uncomment for Slack notifications
     # enable_slack_notifications: 'true' # Optional: Uncomment for Slack notifications
@@ -96,7 +95,6 @@ To use this action in your workflow, add the following step to your `.github/wor
 4. Configure build options:
     - **WebRTC Branch**: `branch-heads/7258` (M139, stable)
     - **Target Architectures**: `armeabi-v7a,arm64-v8a`
-    - **Build Configuration**: `release`
 5. Click **Run workflow** button
 
 ### Step 4: Download AAR
@@ -185,7 +183,6 @@ This action has the following inputs:
 |------------------------------|---------------------------------------------------------------------------------------------------------|-------------------------|:--------:|
 | `webrtc_branch`              | The WebRTC branch to build. Supports branch-heads/XXXX format. Automatically detects milestone version. | `branch-heads/7258`     | `false`  |
 | `target_arch`                | A comma-separated list of target architectures.                                                         | `armeabi-v7a,arm64-v8a` | `false`  |
-| `build_config`               | The build configuration, either `release` or `debug`.                                                   | `release`               | `false`  |
 | `slack_webhook_url`          | The Slack webhook URL for sending build notifications. Must be stored as a GitHub secret.               | `N/A`                   | `false`  |
 | `slack_channel`              | The Slack channel to send notifications to.                                                             | `#build`                | `false`  |
 | `enable_slack_notifications` | Set to `true` to enable Slack notifications. Requires `slack_webhook_url` to be set.                    | `false`                 | `false`  |
@@ -264,7 +261,7 @@ plan)
 • Milestone: M140
 • Branch: branch-heads/7339
 • Architectures: armeabi-v7a,arm64-v8a
-• Configuration: release
+• Configuration: release (optimized)
 
 📦 AAR File: libwebrtc-M{MILESTONE}-{BRANCH}-patched-XX.aar
 (example: libwebrtc-M140-7339-patched-15.aar)
@@ -281,7 +278,7 @@ plan)
 📋 Build Information:
 • Milestone: M140
 • Branch: branch-heads/7339
-• Configuration: release
+• Configuration: release (optimized)
 
 🔍 [Check Build Log](link)
 ```

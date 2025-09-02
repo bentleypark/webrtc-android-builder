@@ -17,11 +17,6 @@ inputs:
     description: 'Target architectures (comma separated)'
     required: false
     default: 'armeabi-v7a,arm64-v8a'
-  
-  build_config:
-    description: 'Build configuration (release or debug)'
-    required: false
-    default: 'release'
 
   slack_webhook_url:
     description: 'Slack webhook URL for notifications (optional)'
@@ -62,7 +57,7 @@ runs:
         echo "🚀 Starting WebRTC Android AAR build..."
         echo "Branch: $BRANCH"
         echo "Architectures: ${{ inputs.target_arch }}"
-        echo "Configuration: ${{ inputs.build_config }}"
+        echo "Configuration: release"
         
         echo "Resolving milestone from branch: $BRANCH"
         URL="https://chromium.googlesource.com/chromium/src/+/refs/${BRANCH}/chrome/VERSION?format=TEXT"
@@ -168,7 +163,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/ccache
-        key: ccache-webrtc-${{ runner.os }}-M${{ env.WEBRTC_MILESTONE }}-${{ inputs.webrtc_branch }}-${{ env.SANITIZED_ARCH }}-${{ inputs.build_config }}
+        key: ccache-webrtc-${{ runner.os }}-M${{ env.WEBRTC_MILESTONE }}-${{ inputs.webrtc_branch }}-${{ env.SANITIZED_ARCH }}-release
         restore-keys: |
           ccache-webrtc-${{ runner.os }}-M${{ env.WEBRTC_MILESTONE }}-${{ inputs.webrtc_branch }}-${{ env.SANITIZED_ARCH }}-
           ccache-webrtc-${{ runner.os }}-M${{ env.WEBRTC_MILESTONE }}-${{ inputs.webrtc_branch }}-
@@ -229,7 +224,7 @@ runs:
         cd webrtc-build/src
         BUILD_ARGS='
           target_os="android"
-          is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}
+          is_debug=false
           is_component_build=false
           is_clang=true
           rtc_include_tests=false
@@ -269,7 +264,7 @@ runs:
         python3 tools_webrtc/android/build_aar.py $ARCH_ARGS \
           --build-dir out/android \
           --output "$AAR_FILENAME" \
-          --extra-gn-args "is_debug=${{ inputs.build_config == 'debug' && 'true' || 'false' }}"
+          --extra-gn-args "is_debug=false"
         
         # Calculate SHA256 hash for verification
         AAR_SHA256=$(sha256sum "$AAR_FILENAME" | cut -d' ' -f1)
@@ -287,7 +282,7 @@ runs:
         WebRTC Milestone: M$WEBRTC_MILESTONE
         WebRTC Version: $WEBRTC_FULL_VERSION
         Branch: ${{ inputs.webrtc_branch }}
-        Build Config: ${{ inputs.build_config }}
+        Build Config: release
         Target Architectures: ${{ inputs.target_arch }}
         AAR Filename: $AAR_FILENAME
         AAR SHA256: $AAR_SHA256
@@ -320,7 +315,7 @@ runs:
           curl -X POST -H 'Content-type: application/json' \
             --data '{
               "channel": "${{ inputs.slack_channel }}",
-              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Milestone: \`M$WEBRTC_MILESTONE\`\n• Version: \`$WEBRTC_FULL_VERSION\`\n• Branch: \`${{ inputs.webrtc_branch }}\`\n• Build: \`$WEBRTC_BUILD\`\n• Patch: \`$WEBRTC_PATCH\`\n• Architectures: \`${{ inputs.target_arch }}\`\n• Configuration: \`${{ inputs.build_config }}\`\n\n📦 *AAR File:* \`${{ steps.build.outputs.aar_filename }}\`\n🔒 *SHA256:* \`$AAR_SHA256\`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
+              "text": "🎉 *WebRTC Android AAR Build Success!*\n\n📋 *Build Information:*\n• Milestone: \`M$WEBRTC_MILESTONE\`\n• Version: \`$WEBRTC_FULL_VERSION\`\n• Branch: \`${{ inputs.webrtc_branch }}\`\n• Build: \`$WEBRTC_BUILD\`\n• Patch: \`$WEBRTC_PATCH\`\n• Architectures: \`${{ inputs.target_arch }}\`\n• Configuration: \`release\`\n\n📦 *AAR File:* \`${{ steps.build.outputs.aar_filename }}\`\n🔒 *SHA256:* \`$AAR_SHA256\`\n\n🔗 [Download Artifacts](${{ steps.build.outputs.download_url }})"
             }' \
             ${{ inputs.slack_webhook_url }}
         fi
